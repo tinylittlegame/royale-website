@@ -42,12 +42,20 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
             if (session?.user && !token) {
                 // OAuth login successful, exchange for backend JWT token
                 try {
-                    const response = await api.post('/auth/login', {
+                    console.log('Attempting OAuth login with:', {
+                        email: session.user.email,
+                        name: session.user.name,
+                        provider: (session as any).provider || 'google',
+                    });
+
+                    const response = await api.post('/auth/oauth/login', {
                         email: session.user.email,
                         name: session.user.name,
                         image: session.user.image,
                         provider: (session as any).provider || 'google',
                     });
+
+                    console.log('Backend response:', response.data);
 
                     const { token: jwtToken, user: userData } = response.data;
 
@@ -57,11 +65,15 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
 
                         localStorage.setItem('jwt_token', jwtToken);
                         localStorage.setItem('user_data', JSON.stringify(userData));
+
+                        console.log('OAuth login successful, user:', userData);
                     } else {
-                        console.error('Invalid token or user data received from backend');
+                        console.error('Invalid token or user data received from backend. Response:', response.data);
                     }
-                } catch (error) {
+                } catch (error: any) {
                     console.error('Failed to exchange OAuth for JWT:', error);
+                    console.error('Error response:', error.response?.data);
+                    console.error('Error status:', error.response?.status);
                 }
             }
 
