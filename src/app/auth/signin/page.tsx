@@ -33,9 +33,20 @@ export default function SignIn() {
     const handleOAuthLogin = (provider: string) => {
         setLoading(true);
         // Use the current origin for the callback URL
-        // If specific domain is needed, we can use an env var, but origin is cleaner for dev/prod parity
-        const callbackUrl = `${window.location.origin}/auth/success`;
-        window.location.href = `${API_URL}/auth/${provider}?callbackUrl=${encodeURIComponent(callbackUrl)}`;
+        const origin = window.location.origin;
+        const callbackPath = '/auth/success';
+        const fullUrl = `${origin}${callbackPath}`;
+
+        // Try multiple common parameter names since we don't know exactly what the backend expects
+        const params = new URLSearchParams({
+            callbackUrl: fullUrl,
+            redirect_uri: fullUrl,
+            redirect: fullUrl,
+            success_url: fullUrl,
+            return_to: fullUrl
+        });
+
+        window.location.href = `${API_URL}/auth/${provider}?${params.toString()}`;
     };
 
     return (
