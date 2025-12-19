@@ -51,11 +51,15 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
 
                     const { token: jwtToken, user: userData } = response.data;
 
-                    setToken(jwtToken);
-                    setUser(userData);
+                    if (jwtToken && userData) {
+                        setToken(jwtToken);
+                        setUser(userData);
 
-                    localStorage.setItem('jwt_token', jwtToken);
-                    localStorage.setItem('user_data', JSON.stringify(userData));
+                        localStorage.setItem('jwt_token', jwtToken);
+                        localStorage.setItem('user_data', JSON.stringify(userData));
+                    } else {
+                        console.error('Invalid token or user data received from backend');
+                    }
                 } catch (error) {
                     console.error('Failed to exchange OAuth for JWT:', error);
                 }
@@ -72,15 +76,17 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         const storedToken = localStorage.getItem('jwt_token');
         const storedUser = localStorage.getItem('user_data');
 
-        if (storedToken && !token) {
+        // Validate token - must exist and not be "undefined" or "null" strings
+        if (storedToken && storedToken !== 'undefined' && storedToken !== 'null' && !token) {
             setToken(storedToken);
         }
 
-        if (storedUser && !user) {
+        // Validate user data - must exist, not be invalid strings, and be parseable JSON
+        if (storedUser && storedUser !== 'undefined' && storedUser !== 'null' && !user) {
             try {
                 const parsedUser = JSON.parse(storedUser);
                 // Validate that parsed data has required User fields
-                if (parsedUser && parsedUser.id && parsedUser.email) {
+                if (parsedUser && typeof parsedUser === 'object' && parsedUser.id && parsedUser.email) {
                     setUser(parsedUser);
                 } else {
                     console.warn("Invalid user data format, clearing storage");
@@ -106,13 +112,17 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
             // Response structure from doc: { token, user: { ... } }
             const { token, user } = response;
 
-            setToken(token);
-            setUser(user);
+            if (token && user) {
+                setToken(token);
+                setUser(user);
 
-            localStorage.setItem('jwt_token', token);
-            localStorage.setItem('user_data', JSON.stringify(user));
+                localStorage.setItem('jwt_token', token);
+                localStorage.setItem('user_data', JSON.stringify(user));
 
-            router.push('/');
+                router.push('/');
+            } else {
+                throw new Error('Invalid response from login API');
+            }
         } catch (error) {
             console.error('Login failed:', error);
             throw error;
