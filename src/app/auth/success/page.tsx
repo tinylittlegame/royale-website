@@ -1,19 +1,22 @@
 'use client';
 
 import { useEffect } from 'react';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { useAuth } from '@/context/AuthContext';
 import { Loader2 } from 'lucide-react';
 
 export default function AuthSuccess() {
     const { token } = useAuth();
     const router = useRouter();
+    const searchParams = useSearchParams();
 
     useEffect(() => {
         if (token) {
-            router.push('/');
+            // Get the callback URL from query params, default to home page
+            const callbackUrl = searchParams.get('callbackUrl') || '/';
+            router.push(callbackUrl);
         }
-    }, [token, router]);
+    }, [token, router, searchParams]);
 
     return (
         <div className="min-h-screen bg-black flex flex-col items-center justify-center p-4">

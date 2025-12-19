@@ -35,15 +35,20 @@ export default function SignIn() {
         // Use the current origin for the callback URL
         const origin = window.location.origin;
         const callbackPath = '/auth/success';
-        const fullUrl = `${origin}${callbackPath}`;
+
+        // Get the final destination from URL params (e.g., /playgame)
+        const finalCallback = searchParams.get('callbackUrl') || '/';
+
+        // Build the success URL with the final callback embedded
+        const successUrl = `${origin}${callbackPath}?callbackUrl=${encodeURIComponent(finalCallback)}`;
 
         // Try multiple common parameter names since we don't know exactly what the backend expects
         const params = new URLSearchParams({
-            callbackUrl: fullUrl,
-            redirect_uri: fullUrl,
-            redirect: fullUrl,
-            success_url: fullUrl,
-            return_to: fullUrl
+            callbackUrl: successUrl,
+            redirect_uri: successUrl,
+            redirect: successUrl,
+            success_url: successUrl,
+            return_to: successUrl
         });
 
         window.location.href = `${API_URL}/auth/${provider}?${params.toString()}`;

@@ -33,6 +33,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         // Check for token in URL (OAuth redirect)
         const urlToken = searchParams.get('token');
         const urlUser = searchParams.get('user'); // Assuming backend might pass user data as JSON string or we fetch it
+        const callbackUrl = searchParams.get('callbackUrl'); // Preserve callback URL
 
         // Check localStorage
         const storedToken = localStorage.getItem('jwt_token');
@@ -42,12 +43,18 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
             setToken(urlToken);
             localStorage.setItem('jwt_token', urlToken);
 
-            // Clear params from URL
-            window.history.replaceState({}, document.title, window.location.pathname);
+            // Clear token params from URL but preserve callbackUrl
+            const newUrl = new URL(window.location.href);
+            newUrl.searchParams.delete('token');
+            newUrl.searchParams.delete('userId');
+            newUrl.searchParams.delete('email');
+            newUrl.searchParams.delete('user');
+            // Keep callbackUrl if it exists
+            window.history.replaceState({}, document.title, newUrl.toString());
 
             // If we have user data in URL or need to fetch it
             // For now, assume we might need to fetch it or it's passed
-            // If not passed, we might need a /me endpoint. 
+            // If not passed, we might need a /me endpoint.
             // Let's rely on stored user or decode if possible, but for now just set token.
         } else if (storedToken) {
             setToken(storedToken);
