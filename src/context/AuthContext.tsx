@@ -31,57 +31,9 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     const searchParams = useSearchParams();
     const { data: session, status: sessionStatus } = useSession();
 
-    // Handle NextAuth session changes (OAuth login)
-    useEffect(() => {
-        const handleOAuthSession = async () => {
-            if (sessionStatus === 'loading') {
-                setLoading(true);
-                return;
-            }
-
-            if (session?.user && !token) {
-                // OAuth login successful, exchange for backend JWT token
-                try {
-                    console.log('Attempting OAuth login with:', {
-                        email: session.user.email,
-                        name: session.user.name,
-                        provider: (session as any).provider || 'google',
-                    });
-
-                    const response = await api.post('/auth/oauth/login', {
-                        email: session.user.email,
-                        name: session.user.name,
-                        image: session.user.image,
-                        provider: (session as any).provider || 'google',
-                    });
-
-                    console.log('Backend response:', response.data);
-
-                    const { token: jwtToken, user: userData } = response.data;
-
-                    if (jwtToken && userData) {
-                        setToken(jwtToken);
-                        setUser(userData);
-
-                        localStorage.setItem('jwt_token', jwtToken);
-                        localStorage.setItem('user_data', JSON.stringify(userData));
-
-                        console.log('OAuth login successful, user:', userData);
-                    } else {
-                        console.error('Invalid token or user data received from backend. Response:', response.data);
-                    }
-                } catch (error: any) {
-                    console.error('Failed to exchange OAuth for JWT:', error);
-                    console.error('Error response:', error.response?.data);
-                    console.error('Error status:', error.response?.status);
-                }
-            }
-
-            setLoading(false);
-        };
-
-        handleOAuthSession();
-    }, [session, sessionStatus, token]);
+    // Note: OAuth is now handled directly by the backend
+    // No need to exchange NextAuth session for JWT
+    // OAuth flow: Frontend -> Backend OAuth -> Backend callback -> /auth/success page
 
     // Check localStorage on mount
     useEffect(() => {
@@ -89,12 +41,12 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         const storedUser = localStorage.getItem('user_data');
 
         // Validate token - must exist and not be "undefined" or "null" strings
-        if (storedToken && storedToken !== 'undefined' && storedToken !== 'null' && !token) {
+        if (storedToken && storedToken !== 'undefined' && storedToken !== 'null') {
             setToken(storedToken);
         }
 
         // Validate user data - must exist, not be invalid strings, and be parseable JSON
-        if (storedUser && storedUser !== 'undefined' && storedUser !== 'null' && !user) {
+        if (storedUser && storedUser !== 'undefined' && storedUser !== 'null') {
             try {
                 const parsedUser = JSON.parse(storedUser);
                 // Validate that parsed data has required User fields
@@ -113,9 +65,8 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
             }
         }
 
-        if (!storedToken && sessionStatus !== 'loading') {
-            setLoading(false);
-        }
+        // Always set loading to false after initial check
+        setLoading(false);
     }, []);
 
     const login = async (email: string, password: string) => {
