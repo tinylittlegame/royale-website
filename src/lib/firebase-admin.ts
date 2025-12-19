@@ -1,5 +1,6 @@
 import * as admin from 'firebase-admin';
 import * as path from 'path';
+import * as fs from 'fs';
 
 // Lazy initialization - only initialize when actually used (not at build time)
 function initializeFirebaseAdmin() {
@@ -8,15 +9,46 @@ function initializeFirebaseAdmin() {
   }
 
   try {
-    // Use service account JSON file (more reliable than env vars)
+    // Try to use JSON file first (for local development)
     const serviceAccountPath = path.join(process.cwd(), 'firebase-service-account.json');
 
-    console.log('[Firebase Admin] Initializing with service account file:', serviceAccountPath);
+    if (fs.existsSync(serviceAccountPath)) {
+      console.log('[Firebase Admin] Using service account JSON file');
+
+      return admin.initializeApp({
+        credential: admin.credential.cert(serviceAccountPath),
+        databaseURL: process.env.FIREBASE_DATABASE_URL || 'https://tiny-little-backend-develop-default-rtdb.asia-southeast1.firebasedatabase.app',
+      });
+    }
+
+    // Fallback to environment variables (for production)
+    console.log('[Firebase Admin] Using environment variables');
+
+    const privateKey = process.env.FIREBASE_SERVICE_ACCOUNT_PRIVATE_KEY;
+
+    if (!privateKey) {
+      throw new Error('FIREBASE_SERVICE_ACCOUNT_PRIVATE_KEY is not set and JSON file not found');
+    }
+
+    // Clean up private key - handle escaped newlines
+    let cleanPrivateKey = privateKey.replace(/^["']|["']$/g, '');
+
+    // Replace literal \n with actual newlines
+    if (cleanPrivateKey.includes('\\n')) {
+      cleanPrivateKey = cleanPrivateKey.replace(/\\n/g, '\n');
+    }
+
+    const serviceAccount = {
+      projectId: process.env.FIREBASE_PROJECT_ID || 'tiny-little-backend-develop',
+      clientEmail: process.env.FIREBASE_SERVICE_ACCOUNT_CLIENT_EMAIL || 'google-api@tiny-little-backend.iam.gserviceaccount.com',
+      privateKey: cleanPrivateKey,
+    };
 
     return admin.initializeApp({
-      credential: admin.credential.cert(serviceAccountPath),
+      credential: admin.credential.cert(serviceAccount),
       databaseURL: process.env.FIREBASE_DATABASE_URL || 'https://tiny-little-backend-develop-default-rtdb.asia-southeast1.firebasedatabase.app',
     });
+
   } catch (error: any) {
     console.error('[Firebase Admin] Initialization error:', error.message);
     throw error;
