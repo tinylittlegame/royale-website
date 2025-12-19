@@ -27,9 +27,32 @@ export async function POST(req: NextRequest) {
       );
     }
 
+    // Check if JWT_SECRET is available
+    if (!JWT_SECRET) {
+      console.error('[OAuth Login] JWT_SECRET is not set!');
+      return NextResponse.json(
+        { error: 'Server configuration error: JWT_SECRET not set' },
+        { status: 500 }
+      );
+    }
+
     // Get Firebase instances
-    const auth = getAuth();
-    const db = getDb();
+    let auth, db;
+    try {
+      auth = getAuth();
+      db = getDb();
+      console.log('[OAuth Login] Firebase initialized successfully');
+    } catch (firebaseError: any) {
+      console.error('[OAuth Login] Firebase initialization error:', firebaseError);
+      return NextResponse.json(
+        {
+          error: 'Firebase initialization failed',
+          message: firebaseError.message,
+          details: process.env.NODE_ENV === 'development' ? firebaseError.stack : undefined
+        },
+        { status: 500 }
+      );
+    }
 
     // Step 1: Get or create Firebase Auth user
     let firebaseUser;
