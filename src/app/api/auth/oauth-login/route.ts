@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { db, auth } from '@/lib/firebase-admin';
+import { getDb, getAuth } from '@/lib/firebase-admin';
 import jwt from 'jsonwebtoken';
 
 // JWT configuration (same as backend)
@@ -26,6 +26,10 @@ export async function POST(req: NextRequest) {
         { status: 400 }
       );
     }
+
+    // Get Firebase instances
+    const auth = getAuth();
+    const db = getDb();
 
     // Step 1: Get or create Firebase Auth user
     let firebaseUser;
