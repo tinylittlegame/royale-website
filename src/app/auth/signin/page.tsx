@@ -7,6 +7,7 @@ import Image from 'next/image';
 import Link from 'next/link';
 import { Apple } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
+import { signIn } from 'next-auth/react';
 
 export default function SignIn() {
     const searchParams = useSearchParams();
@@ -34,16 +35,12 @@ export default function SignIn() {
         // Get the final destination from URL params (e.g., /playgame)
         const callbackUrl = searchParams.get('callbackUrl') || '/';
 
-        // Store callback URL in sessionStorage so we can redirect after OAuth
-        if (typeof window !== 'undefined') {
-            sessionStorage.setItem('oauth_callback_url', callbackUrl);
-        }
-
-        // Get backend URL from env
-        const backendUrl = process.env.NEXT_PUBLIC_API_URL || 'https://tinybackend-dev.tinylittle.xyz/api';
-
-        // Redirect to backend OAuth endpoint - backend will handle the entire OAuth flow
-        window.location.href = `${backendUrl}/auth/${provider}`;
+        // Use NextAuth signIn - it will handle OAuth flow
+        // After successful OAuth, AuthContext will automatically exchange for JWT
+        await signIn(provider, {
+            redirect: true,
+            callbackUrl: callbackUrl
+        });
     };
 
     return (

@@ -31,9 +31,69 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     const searchParams = useSearchParams();
     const { data: session, status: sessionStatus } = useSession();
 
-    // Note: OAuth is now handled directly by the backend
-    // No need to exchange NextAuth session for JWT
-    // OAuth flow: Frontend -> Backend OAuth -> Backend callback -> /auth/success page
+    // Handle NextAuth session changes (OAuth login)
+    useEffect(() => {
+        const handleOAuthSession = async () => {
+            if (sessionStatus === 'loading') {
+                setLoading(true);
+                return;
+            }
+
+            if (session?.user && !token) {
+                // OAuth login successful, exchange for backend JWT token via our Next.js API route
+                try {
+                    console.log('Attempting OAuth login with:', {
+                        email: session.user.email,
+                        name: session.user.name,
+                        provider: (session as any).provider || 'google',
+                    });
+
+                    // Call our Next.js API route (not the backend directly)
+                    const response = await fetch('/api/auth/oauth-login', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                        },
+                        body: JSON.stringify({
+                            email: session.user.email,
+                            name: session.user.name,
+                            image: session.user.image,
+                            provider: (session as any).provider || 'google',
+                        }),
+                    });
+
+                    if (!response.ok) {
+                        const errorData = await response.json();
+                        console.error('OAuth login failed:', errorData);
+                        throw new Error(errorData.error || 'OAuth login failed');
+                    }
+
+                    const data = await response.json();
+                    console.log('Backend response:', data);
+
+                    const { token: jwtToken, user: userData } = data;
+
+                    if (jwtToken && userData) {
+                        setToken(jwtToken);
+                        setUser(userData);
+
+                        localStorage.setItem('jwt_token', jwtToken);
+                        localStorage.setItem('user_data', JSON.stringify(userData));
+
+                        console.log('OAuth login successful, user:', userData);
+                    } else {
+                        console.error('Invalid token or user data received. Response:', data);
+                    }
+                } catch (error: any) {
+                    console.error('Failed to exchange OAuth for JWT:', error);
+                }
+            }
+
+            setLoading(false);
+        };
+
+        handleOAuthSession();
+    }, [session, sessionStatus, token]);
 
     // Check localStorage on mount
     useEffect(() => {
