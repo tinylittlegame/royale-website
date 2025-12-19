@@ -12,8 +12,10 @@ export default function PlayGame() {
     const [gameUserId, setGameUserId] = useState<string | null>(null);
     const [loading, setLoading] = useState(true);
 
+    const [errorMsg, setErrorMsg] = useState<string | null>(null);
+
     const GAME_URL = process.env.NEXT_PUBLIC_GAME_URL || "https://tinylittlefly.io/";
-    const GAME_ID = 'tiny-little-royale'; // or derived from env/params
+    const GAME_ID = 'tiny-little-royale';
 
     useEffect(() => {
         if (!authLoading) {
@@ -26,9 +28,10 @@ export default function PlayGame() {
                         const data = await getGameToken(GAME_ID);
                         setGameToken(data.token);
                         setGameUserId(data.userId);
-                    } catch (error) {
+                    } catch (error: any) {
                         console.error("Failed to get game token", error);
-                        // Handle error (maybe show error message or retry)
+                        const msg = error.response?.data?.message || error.message || "Failed to load game token";
+                        setErrorMsg(`${msg} (Status: ${error.response?.status})`);
                     } finally {
                         setLoading(false);
                     }
@@ -46,10 +49,17 @@ export default function PlayGame() {
         );
     }
 
-    if (!gameToken || !gameUserId) {
+    if (errorMsg || !gameToken || !gameUserId) {
         return (
-            <div className="w-full h-[calc(100vh-64px)] bg-black flex items-center justify-center text-white">
-                Failed to load game token. Please try refreshing.
+            <div className="w-full h-[calc(100vh-64px)] bg-black flex flex-col items-center justify-center text-white gap-4">
+                <p className="text-red-500 font-bold text-xl">Error Loading Game</p>
+                <p className="text-gray-400">{errorMsg || "Failed to load game token"}</p>
+                <button
+                    onClick={() => window.location.reload()}
+                    className="px-4 py-2 bg-yellow-500 text-black rounded hover:bg-yellow-400 font-bold"
+                >
+                    Try Refreshing
+                </button>
             </div>
         );
     }

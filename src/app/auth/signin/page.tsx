@@ -1,8 +1,8 @@
 'use client';
 
-import { useSearchParams } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { motion } from 'framer-motion';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
 import { Apple } from 'lucide-react';
@@ -11,7 +11,16 @@ import { signIn } from 'next-auth/react';
 
 export default function SignIn() {
     const searchParams = useSearchParams();
-    const { login, loading: authLoading } = useAuth(); // rename loading to avoid conflict
+    const router = useRouter(); // Initialize router
+    const { login, loading: authLoading, user } = useAuth(); // rename loading to avoid conflict, get user
+
+    // Redirect if already logged in
+    useEffect(() => {
+        if (user && !authLoading) {
+            const callbackUrl = searchParams.get('callbackUrl') || '/';
+            router.push(callbackUrl);
+        }
+    }, [user, authLoading, router, searchParams]);
     const [loading, setLoading] = useState(false);
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');

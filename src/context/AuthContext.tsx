@@ -42,12 +42,6 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
             if (session?.user && !token) {
                 // OAuth login successful, exchange for backend JWT token via our Next.js API route
                 try {
-                    console.log('Attempting OAuth login with:', {
-                        email: session.user.email,
-                        name: session.user.name,
-                        provider: (session as any).provider || 'google',
-                    });
-
                     // Call our Next.js API route (not the backend directly)
                     const response = await fetch('/api/auth/oauth-login', {
                         method: 'POST',
@@ -69,7 +63,6 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
                     }
 
                     const data = await response.json();
-                    console.log('Backend response:', data);
 
                     const { token: jwtToken, user: userData } = data;
 
@@ -79,8 +72,6 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
 
                         localStorage.setItem('jwt_token', jwtToken);
                         localStorage.setItem('user_data', JSON.stringify(userData));
-
-                        console.log('OAuth login successful, user:', userData);
                     } else {
                         console.error('Invalid token or user data received. Response:', data);
                     }

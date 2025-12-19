@@ -18,8 +18,6 @@ export async function POST(req: NextRequest) {
     const body: OAuthLoginRequest = await req.json();
     const { email, name, image, provider } = body;
 
-    console.log('[OAuth Login] Request:', { email, name, provider });
-
     if (!email || !name || !provider) {
       return NextResponse.json(
         { error: 'Missing required fields: email, name, provider' },
@@ -41,7 +39,6 @@ export async function POST(req: NextRequest) {
     try {
       auth = getAuth();
       db = getDb();
-      console.log('[OAuth Login] Firebase initialized successfully');
     } catch (firebaseError: any) {
       console.error('[OAuth Login] Firebase initialization error:', firebaseError);
       return NextResponse.json(
@@ -58,7 +55,6 @@ export async function POST(req: NextRequest) {
     let firebaseUser;
     try {
       firebaseUser = await auth.getUserByEmail(email);
-      console.log('[OAuth Login] Found existing Firebase user:', firebaseUser.uid);
     } catch (error) {
       // User doesn't exist, create new Firebase Auth user
       firebaseUser = await auth.createUser({
@@ -66,7 +62,6 @@ export async function POST(req: NextRequest) {
         displayName: name,
         photoURL: image,
       });
-      console.log('[OAuth Login] Created new Firebase user:', firebaseUser.uid);
     }
 
     // Step 2: Get or create user document in Firestore
@@ -78,7 +73,6 @@ export async function POST(req: NextRequest) {
     if (userDoc.exists) {
       // User exists, get data
       userData = userDoc.data() || {};
-      console.log('[OAuth Login] Found existing user in Firestore');
 
       // Update auth providers if needed
       const authProviders = userData.authProviders || [];
@@ -94,8 +88,6 @@ export async function POST(req: NextRequest) {
           authProviders,
           updateAt: new Date(),
         });
-
-        console.log('[OAuth Login] Added new auth provider:', provider);
       }
     } else {
       // Create new user document
@@ -118,7 +110,6 @@ export async function POST(req: NextRequest) {
       };
 
       await usersRef.doc(firebaseUser.uid).set(userData);
-      console.log('[OAuth Login] Created new user in Firestore');
     }
 
     // Step 3: Generate JWT token (same format as backend)
@@ -138,8 +129,6 @@ export async function POST(req: NextRequest) {
     const token = jwt.sign(tokenPayload, JWT_SECRET!, {
       expiresIn: JWT_EXPIRES_IN,
     });
-
-    console.log('[OAuth Login] JWT token generated successfully');
 
     // Step 4: Return response (same format as backend)
     const response = {

@@ -54,9 +54,9 @@ const Navbar = () => {
                                     <span className="text-gray-300 text-sm">
                                         {user.name || user.email}
                                     </span>
-                                    {user.avatar && (
+                                    {user.photo && (
                                         <Image
-                                            src={user.avatar}
+                                            src={user.photo}
                                             alt="Profile"
                                             width={32}
                                             height={32}
@@ -117,9 +117,9 @@ const Navbar = () => {
                             <div className="border-t border-gray-700 pt-4 pb-3">
                                 <div className="flex items-center px-5">
                                     <div className="flex-shrink-0">
-                                        {user.avatar && (
+                                        {user.photo && (
                                             <Image
-                                                src={user.avatar}
+                                                src={user.photo}
                                                 alt="Profile"
                                                 width={40}
                                                 height={40}
