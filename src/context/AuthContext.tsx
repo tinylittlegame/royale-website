@@ -78,9 +78,20 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
 
         if (storedUser && !user) {
             try {
-                setUser(JSON.parse(storedUser));
+                const parsedUser = JSON.parse(storedUser);
+                // Validate that parsed data has required User fields
+                if (parsedUser && parsedUser.id && parsedUser.email) {
+                    setUser(parsedUser);
+                } else {
+                    console.warn("Invalid user data format, clearing storage");
+                    localStorage.removeItem('user_data');
+                    localStorage.removeItem('jwt_token');
+                }
             } catch (e) {
-                console.error("Failed to parse stored user data");
+                console.error("Failed to parse stored user data, clearing storage:", e);
+                // Clear corrupted data
+                localStorage.removeItem('user_data');
+                localStorage.removeItem('jwt_token');
             }
         }
 
