@@ -46,15 +46,15 @@ export async function POST(req: NextRequest) {
     const usersRef = db.collection('users');
     const userDoc = await usersRef.doc(firebaseUser.uid).get();
 
-    let userData;
+    let userData: any;
 
     if (userDoc.exists) {
       // User exists, get data
-      userData = userDoc.data();
+      userData = userDoc.data() || {};
       console.log('[OAuth Login] Found existing user in Firestore');
 
       // Update auth providers if needed
-      const authProviders = userData?.authProviders || [];
+      const authProviders = userData.authProviders || [];
       const providerExists = authProviders.some((p: any) => p.providerId === provider);
 
       if (!providerExists) {
@@ -98,13 +98,13 @@ export async function POST(req: NextRequest) {
     const tokenPayload = {
       type: 'PASSPORT_TOKEN',
       user: {
-        id: userData.id || firebaseUser.uid,
+        id: userData?.id || firebaseUser.uid,
         authUserId: firebaseUser.uid,
-        email: userData.email,
-        displayName: userData.displayName || name,
-        photo: userData.photo || image || '',
-        country: userData.country || 'unknown',
-        authProviders: userData.authProviders,
+        email: userData?.email || email,
+        displayName: userData?.displayName || name,
+        photo: userData?.photo || image || '',
+        country: userData?.country || 'unknown',
+        authProviders: userData?.authProviders || [],
       },
     };
 
