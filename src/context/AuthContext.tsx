@@ -2,6 +2,7 @@
 
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
+import { useSession, signOut as nextAuthSignOut } from 'next-auth/react';
 import api, { login as apiLogin, register as apiRegister } from '@/lib/api';
 
 interface User {
@@ -28,39 +29,54 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     const [loading, setLoading] = useState(true);
     const router = useRouter();
     const searchParams = useSearchParams();
+    const { data: session, status: sessionStatus } = useSession();
 
+    // Handle NextAuth session changes (OAuth login)
     useEffect(() => {
-        // Check for token in URL (OAuth redirect)
-        const urlToken = searchParams.get('token');
-        const urlUser = searchParams.get('user'); // Assuming backend might pass user data as JSON string or we fetch it
-        const callbackUrl = searchParams.get('callbackUrl'); // Preserve callback URL
+        const handleOAuthSession = async () => {
+            if (sessionStatus === 'loading') {
+                setLoading(true);
+                return;
+            }
 
-        // Check localStorage
+            if (session?.user && !token) {
+                // OAuth login successful, exchange for backend JWT token
+                try {
+                    const response = await api.post('/auth/login', {
+                        email: session.user.email,
+                        name: session.user.name,
+                        image: session.user.image,
+                        provider: (session as any).provider || 'google',
+                    });
+
+                    const { token: jwtToken, user: userData } = response.data;
+
+                    setToken(jwtToken);
+                    setUser(userData);
+
+                    localStorage.setItem('jwt_token', jwtToken);
+                    localStorage.setItem('user_data', JSON.stringify(userData));
+                } catch (error) {
+                    console.error('Failed to exchange OAuth for JWT:', error);
+                }
+            }
+
+            setLoading(false);
+        };
+
+        handleOAuthSession();
+    }, [session, sessionStatus, token]);
+
+    // Check localStorage on mount
+    useEffect(() => {
         const storedToken = localStorage.getItem('jwt_token');
         const storedUser = localStorage.getItem('user_data');
 
-        if (urlToken) {
-            setToken(urlToken);
-            localStorage.setItem('jwt_token', urlToken);
-
-            // Clear token params from URL but preserve callbackUrl
-            const newUrl = new URL(window.location.href);
-            newUrl.searchParams.delete('token');
-            newUrl.searchParams.delete('userId');
-            newUrl.searchParams.delete('email');
-            newUrl.searchParams.delete('user');
-            // Keep callbackUrl if it exists
-            window.history.replaceState({}, document.title, newUrl.toString());
-
-            // If we have user data in URL or need to fetch it
-            // For now, assume we might need to fetch it or it's passed
-            // If not passed, we might need a /me endpoint.
-            // Let's rely on stored user or decode if possible, but for now just set token.
-        } else if (storedToken) {
+        if (storedToken && !token) {
             setToken(storedToken);
         }
 
-        if (storedUser) {
+        if (storedUser && !user) {
             try {
                 setUser(JSON.parse(storedUser));
             } catch (e) {
@@ -68,8 +84,10 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
             }
         }
 
-        setLoading(false);
-    }, [searchParams]);
+        if (!storedToken && sessionStatus !== 'loading') {
+            setLoading(false);
+        }
+    }, []);
 
     const login = async (email: string, password: string) => {
         try {
@@ -102,11 +120,15 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         }
     }
 
-    const logout = () => {
+    const logout = async () => {
         setUser(null);
         setToken(null);
         localStorage.removeItem('jwt_token');
         localStorage.removeItem('user_data');
+
+        // Sign out from NextAuth session
+        await nextAuthSignOut({ redirect: false });
+
         router.push('/auth/signin');
     };
 

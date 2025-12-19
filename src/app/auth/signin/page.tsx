@@ -7,6 +7,7 @@ import Image from 'next/image';
 import Link from 'next/link';
 import { Apple } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
+import { signIn } from 'next-auth/react';
 
 export default function SignIn() {
     const searchParams = useSearchParams();
@@ -15,8 +16,6 @@ export default function SignIn() {
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
     const [error, setError] = useState('');
-
-    const API_URL = process.env.NEXT_PUBLIC_API_URL || 'https://tinybackend-dev.tinylittle.xyz/api';
 
     const handleCredentialsLogin = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -30,28 +29,17 @@ export default function SignIn() {
         }
     };
 
-    const handleOAuthLogin = (provider: string) => {
+    const handleOAuthLogin = async (provider: string) => {
         setLoading(true);
-        // Use the current origin for the callback URL
-        const origin = window.location.origin;
-        const callbackPath = '/auth/success';
 
         // Get the final destination from URL params (e.g., /playgame)
-        const finalCallback = searchParams.get('callbackUrl') || '/';
+        const callbackUrl = searchParams.get('callbackUrl') || '/';
 
-        // Build the success URL with the final callback embedded
-        const successUrl = `${origin}${callbackPath}?callbackUrl=${encodeURIComponent(finalCallback)}`;
-
-        // Try multiple common parameter names since we don't know exactly what the backend expects
-        const params = new URLSearchParams({
-            callbackUrl: successUrl,
-            redirect_uri: successUrl,
-            redirect: successUrl,
-            success_url: successUrl,
-            return_to: successUrl
+        // Use NextAuth signIn - it will handle OAuth flow and redirect back to this domain
+        await signIn(provider, {
+            redirect: true,
+            callbackUrl: callbackUrl
         });
-
-        window.location.href = `${API_URL}/auth/${provider}?${params.toString()}`;
     };
 
     return (
