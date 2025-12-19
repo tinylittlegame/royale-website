@@ -15,7 +15,7 @@ export default function PlayGame() {
     const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
     const GAME_URL = process.env.NEXT_PUBLIC_GAME_URL || "https://tinylittlefly.io/";
-    const GAME_ID = 'tiny-little-royale';
+    const GAME_ID = process.env.NEXT_PUBLIC_GAME_ID || 'tiny-little-fly';
 
     useEffect(() => {
         if (!authLoading) {
