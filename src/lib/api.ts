@@ -32,7 +32,9 @@ export const register = async (data: any) => {
 };
 
 export const getGameToken = async (gameId: string) => {
-    const response = await api.post(`/game-stats/${gameId}`);
+    // Use /unprotected endpoint per LOGIN_TOKEN_SYSTEM.md
+    // This works for both guest and authenticated users without JWT
+    const response = await api.post(`/game-stats/${gameId}/unprotected`);
     return response.data;
 };
 
