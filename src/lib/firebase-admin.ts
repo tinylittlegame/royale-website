@@ -39,8 +39,8 @@ function initializeFirebaseAdmin() {
     }
 
     const serviceAccount = {
-      projectId: process.env.FIREBASE_PROJECT_ID || 'tiny-little-backend-develop',
-      clientEmail: process.env.FIREBASE_SERVICE_ACCOUNT_CLIENT_EMAIL || 'google-api@tiny-little-backend.iam.gserviceaccount.com',
+      projectId: process.env.FIREBASE_PROJECT_ID,
+      clientEmail: process.env.FIREBASE_SERVICE_ACCOUNT_CLIENT_EMAIL,
       privateKey: cleanPrivateKey,
     };
 

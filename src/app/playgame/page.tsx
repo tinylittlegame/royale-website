@@ -64,9 +64,9 @@ export default function PlayGame() {
         );
     }
 
-    // Append token to Game URL
-    // Supports Login V2 which requires userId
-    const finalGameUrl = `${GAME_URL}?token=${gameToken}&userId=${gameUserId}&username=${encodeURIComponent(user?.name || '')}`;
+    // Append user ID and login token to Game URL
+    // Format: ?user={userId}&login-token={token}
+    const finalGameUrl = `${GAME_URL}?user=${gameUserId}&login-token=${gameToken}`;
 
     return (
         <div className="w-full h-[calc(100vh-64px)] bg-black relative">
