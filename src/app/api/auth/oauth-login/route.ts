@@ -3,7 +3,16 @@ import { getDb, getAuth } from '@/lib/firebase-admin';
 import jwt from 'jsonwebtoken';
 
 // JWT configuration (same as backend)
-const JWT_SECRET = process.env.NEXTAUTH_SECRET || process.env.JWT_SECRET;
+const JWT_SECRET = process.env.JWT_SECRET || process.env.NEXTAUTH_SECRET;
+
+if (process.env.NODE_ENV === 'development') {
+  console.log('[OAuth Login] Token Secret resolution:', {
+    hasJWTSecret: !!process.env.JWT_SECRET,
+    hasNextAuthSecret: !!process.env.NEXTAUTH_SECRET,
+    usingJWTSecret: !!process.env.JWT_SECRET
+  });
+}
+
 const JWT_EXPIRES_IN = '30d'; // 30 days (same as backend: 2592000000ms)
 
 interface OAuthLoginRequest {
