@@ -31,17 +31,22 @@ export const register = async (data: any) => {
     return response.data;
 };
 
-export const getGameToken = async (gameId: string, isAuthenticated: boolean = true) => {
-    // Per LOGIN_TOKEN_SYSTEM.md:
-    // - Authenticated users: POST /game-stats/{gameId} with JWT
-    // - Guest users: POST /game-stats/{gameId}/unprotected (no JWT)
-    if (isAuthenticated) {
-        const response = await api.post(`/game-stats/${gameId}`);
-        return response.data;
-    } else {
-        const response = await api.post(`/game-stats/${gameId}/unprotected`);
-        return response.data;
-    }
+export const getGameToken = async (gameId: string) => {
+    const response = await api.post(`/game-stats/${gameId}`);
+    return response.data;
+};
+
+export const getGuestToken = async (gameId: string) => {
+    const response = await api.post(`/game-stats/${gameId}/unprotected`);
+    return response.data;
+};
+
+export const updateGuestToken = async (gameId: string, userId: string, username: string) => {
+    const response = await api.put(`/game-stats/${gameId}/unprotected`, {
+        userId,
+        username
+    });
+    return response.data;
 };
 
 export const getLeaderboard = async (gameId: string, type: string = 'monthly-deathmatch', limit: number = 20) => {

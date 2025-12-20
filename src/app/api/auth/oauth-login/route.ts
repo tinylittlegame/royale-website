@@ -9,8 +9,12 @@ if (process.env.NODE_ENV === 'development') {
   console.log('[OAuth Login] Token Secret resolution:', {
     hasJWTSecret: !!process.env.JWT_SECRET,
     hasNextAuthSecret: !!process.env.NEXTAUTH_SECRET,
-    usingJWTSecret: !!process.env.JWT_SECRET
+    usingJWTSecret: !!process.env.JWT_SECRET,
+    secretLength: process.env.JWT_SECRET?.length || process.env.NEXTAUTH_SECRET?.length
   });
+  if (!process.env.JWT_SECRET) {
+    console.warn('[OAuth Login] WARNING: JWT_SECRET is not set, falling back to NEXTAUTH_SECRET. This may cause 401 errors on the backend.');
+  }
 }
 
 const JWT_EXPIRES_IN = '30d'; // 30 days (same as backend: 2592000000ms)
