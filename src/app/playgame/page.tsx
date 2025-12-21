@@ -67,38 +67,63 @@ export default function PlayGame() {
   };
 
   const initialize = useCallback(async () => {
+    console.log("[PlayGame] Initializing with:", {
+      GAME_ID,
+      hasJwtToken: !!jwtToken,
+      jwtTokenPrefix: jwtToken ? jwtToken.substring(0, 10) + "..." : "none",
+      status,
+      showChoice,
+      hasLocalUserId: !!getCookie("userId")
+    });
+
     try {
       if (jwtToken && jwtToken !== "unauthenticated") {
+        console.log("[PlayGame] Attempting Authenticated Flow");
         const data = await authenUser();
+        console.log("[PlayGame] Authenticated Flow Success:", data.userId);
         setStateAndCookie(data);
       } else {
         // Only auto-initialize if we aren't explicitly showing choice
         // If unauthenticated and no choice made yet, show choice
         if (!showChoice && !token) {
+          console.log("[PlayGame] Unauthenticated - Showing Choice View");
           setShowChoice(true);
           return;
         }
 
         if (getCookie("userId")) {
+          console.log("[PlayGame] Attempting Guest Update Flow (UserId exists)");
           const data = await updateToken();
+          console.log("[PlayGame] Guest Update Success:", data.userId);
           setStateAndCookie(data);
         } else {
+          console.log("[PlayGame] Attempting Guest Creation Flow");
           const data = await guestUser();
+          console.log("[PlayGame] Guest Creation Success:", data.userId);
           setStateAndCookie(data);
         }
       }
     } catch (error: any) {
-      console.error("Initialization error:", error);
+      console.error("[PlayGame] Initialization Error:", {
+        message: error.message,
+        status: error.response?.status,
+        data: error.response?.data,
+        configUrl: error.config?.url
+      });
+
       try {
         // Fallback to guest ONLY if they already made the choice to play guest
         if (!jwtToken || jwtToken === "unauthenticated") {
+          console.log("[PlayGame] Error in guest flow, retrying guestUser fallback...");
           const data = await guestUser();
           setStateAndCookie(data);
         } else {
-          setErrorMsg("Failed to initialize game session. Please log in again.");
+          console.warn("[PlayGame] Error in authenticated flow, not falling back automatically to guest to avoid cross-contamination.");
+          setErrorMsg(`Failed to initialize session (Status: ${error.response?.status || "Unknown"}). Please try logging in again or refresh.`);
         }
       } catch (fallbackError: any) {
-        setErrorMsg("Failed to initialize game session");
+        console.error("[PlayGame] Fallback Error:", fallbackError);
+        setErrorMsg("Failed to initialize game session even after fallback.");
       }
     }
   }, [jwtToken, status, setStateAndCookie, showChoice, token]);

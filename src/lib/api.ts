@@ -21,6 +21,17 @@ api.interceptors.request.use((config) => {
     return Promise.reject(error);
 });
 
+// Add a response interceptor for global error logging
+api.interceptors.response.use((response) => response, (error) => {
+    if (typeof window !== 'undefined') {
+        const status = error.response?.status;
+        const url = error.config?.url;
+        const method = error.config?.method?.toUpperCase();
+        console.error(`[API Error] ${method} ${url} returned ${status}`, error.response?.data);
+    }
+    return Promise.reject(error);
+});
+
 export const login = async (email: string, password: string) => {
     const response = await api.post('/auth/credentials/login', { email, password });
     return response.data;
