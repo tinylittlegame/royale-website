@@ -3,7 +3,7 @@
 import { useEffect, useState, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/context/AuthContext";
-import { getGameToken, getGuestToken, updateGuestToken } from "@/lib/api";
+import { getGameToken, getGuestToken, updateGuestToken, manageGuestUser } from "@/lib/api";
 import { getCookie, setCookie, addMinutesToDate } from "@/lib/cookie";
 import LoadingScreen from "@/components/LoadingScreen";
 import { useSession } from "next-auth/react";
@@ -11,7 +11,7 @@ import { useSession } from "next-auth/react";
 type InfoType = { token: string; userId: string; username: string };
 
 const GAME_URL = process.env.NEXT_PUBLIC_GAME_URL || "https://tinylittleroyale.io/";
-const GAME_ID = process.env.NEXT_PUBLIC_GAME_ID || "tiny-little-royale";
+const GAME_ID = process.env.NEXT_PUBLIC_GAME_ID || "tiny-little-fly";
 
 export default function PlayGame() {
   const { token: jwtToken, loading: authLoading } = useAuth();
@@ -36,38 +36,45 @@ export default function PlayGame() {
   }, []);
 
   const authenUser = async (): Promise<InfoType> => {
-    const response = await getGameToken(GAME_ID);
+    const data = await getGameToken(GAME_ID);
+
+    // Check if guest user needs promotion
+    if (data.username && data.username.toLowerCase().includes('guest')) {
+      console.log("[PlayGame] Authenticated user identified as guest, promoting...");
+      await manageGuestUser(data.userId);
+    }
+
     return {
-      token: response.token,
-      userId: response.userId,
-      username: response.username,
+      token: data.token,
+      userId: data.userId,
+      username: data.username,
     };
   };
 
   const updateToken = async (): Promise<InfoType> => {
-    const response = await updateGuestToken(
+    const data = await updateGuestToken(
       GAME_ID,
       getCookie("userId") || "",
       getCookie("username") || ""
     );
     return {
-      token: response.token,
-      userId: response.userId,
-      username: response.username,
+      token: data.token,
+      userId: data.userId,
+      username: data.username,
     };
   };
 
   const guestUser = async (): Promise<InfoType> => {
-    const response = await getGuestToken(GAME_ID);
+    const data = await getGuestToken(GAME_ID);
     return {
-      token: response.token,
-      userId: response.userId,
-      username: response.username,
+      token: data.token,
+      userId: data.userId,
+      username: data.username,
     };
   };
 
   const initialize = useCallback(async () => {
-    console.log("[PlayGame] Initializing with:", {
+    console.log("[PlayGame] Initializing v2 with:", {
       GAME_ID,
       hasJwtToken: !!jwtToken,
       jwtTokenPrefix: jwtToken ? jwtToken.substring(0, 10) + "..." : "none",
@@ -80,7 +87,6 @@ export default function PlayGame() {
       if (jwtToken && jwtToken !== "unauthenticated") {
         console.log("[PlayGame] Attempting Authenticated Flow");
         const data = await authenUser();
-        console.log("[PlayGame] Authenticated Flow Success:", data.userId);
         setStateAndCookie(data);
       } else {
         // Only auto-initialize if we aren't explicitly showing choice
@@ -94,12 +100,10 @@ export default function PlayGame() {
         if (getCookie("userId")) {
           console.log("[PlayGame] Attempting Guest Update Flow (UserId exists)");
           const data = await updateToken();
-          console.log("[PlayGame] Guest Update Success:", data.userId);
           setStateAndCookie(data);
         } else {
-          console.log("[PlayGame] Attempting Guest Creation Flow");
+          console.log("[PlayGame] Attempting New Guest Flow");
           const data = await guestUser();
-          console.log("[PlayGame] Guest Creation Success:", data.userId);
           setStateAndCookie(data);
         }
       }
@@ -118,7 +122,7 @@ export default function PlayGame() {
           const data = await guestUser();
           setStateAndCookie(data);
         } else {
-          console.warn("[PlayGame] Error in authenticated flow, not falling back automatically to guest to avoid cross-contamination.");
+          console.warn("[PlayGame] Error in authenticated flow, mapping error message.");
           setErrorMsg(`Failed to initialize session (Status: ${error.response?.status || "Unknown"}). Please try logging in again or refresh.`);
         }
       } catch (fallbackError: any) {
@@ -144,7 +148,18 @@ export default function PlayGame() {
   useEffect(() => {
     const handleMessage = (event: MessageEvent) => {
       if (event.data === "signup") {
-        router.push("/");
+        console.log("[PlayGame] Received signup event from game");
+
+        // Extract referral code from URL hash
+        const hash = window.location.hash.substring(1);
+        const params = new URLSearchParams(hash);
+        const referralCode = params.get('referral');
+
+        if (referralCode) {
+          router.push(`/#referral=${referralCode}`);
+        } else {
+          router.push("/");
+        }
       }
     };
     window.addEventListener("message", handleMessage);

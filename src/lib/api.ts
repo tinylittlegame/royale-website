@@ -44,12 +44,12 @@ export const register = async (data: any) => {
 
 export const getGameToken = async (gameId: string) => {
     const response = await api.post(`/game-stats/${gameId}`);
-    return response.data;
+    return response.data.data;
 };
 
 export const getGuestToken = async (gameId: string) => {
     const response = await api.post(`/game-stats/${gameId}/unprotected`);
-    return response.data;
+    return response.data.data;
 };
 
 export const updateGuestToken = async (gameId: string, userId: string, username: string) => {
@@ -57,6 +57,11 @@ export const updateGuestToken = async (gameId: string, userId: string, username:
         userId,
         username
     });
+    return response.data.data;
+};
+
+export const manageGuestUser = async (userId: string) => {
+    const response = await api.put(`/api/users/${userId}/manage-guest-user`);
     return response.data;
 };
 
