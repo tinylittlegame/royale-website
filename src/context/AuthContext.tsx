@@ -34,6 +34,16 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     // Handle NextAuth session changes (OAuth login)
     useEffect(() => {
         const handleOAuthSession = async () => {
+            if (sessionStatus === 'unauthenticated' && token) {
+                // NextAuth session gone but backend token still exists, clear it
+                setToken(null);
+                setUser(null);
+                localStorage.removeItem('jwt_token');
+                localStorage.removeItem('user_data');
+                setLoading(false);
+                return;
+            }
+
             if (sessionStatus === 'loading') {
                 setLoading(true);
                 return;

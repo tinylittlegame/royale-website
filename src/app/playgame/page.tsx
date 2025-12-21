@@ -115,19 +115,14 @@ export default function PlayGame() {
         configUrl: error.config?.url
       });
 
+      // Strict v2 fallback: always try guest if any flow fails (as per documentation)
       try {
-        // Fallback to guest ONLY if they already made the choice to play guest
-        if (!jwtToken || jwtToken === "unauthenticated") {
-          console.log("[PlayGame] Error in guest flow, retrying guestUser fallback...");
-          const data = await guestUser();
-          setStateAndCookie(data);
-        } else {
-          console.warn("[PlayGame] Error in authenticated flow, mapping error message.");
-          setErrorMsg(`Failed to initialize session (Status: ${error.response?.status || "Unknown"}). Please try logging in again or refresh.`);
-        }
+        console.log("[PlayGame] Any initialization failure results in Guest fallback (as per docs)");
+        const data = await guestUser();
+        setStateAndCookie(data);
       } catch (fallbackError: any) {
         console.error("[PlayGame] Fallback Error:", fallbackError);
-        setErrorMsg("Failed to initialize game session even after fallback.");
+        setErrorMsg("Failed to initialize game session even after guest fallback. Please check your internet connection and refresh.");
       }
     }
   }, [jwtToken, status, setStateAndCookie, showChoice, token]);
