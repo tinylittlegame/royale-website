@@ -42,11 +42,17 @@ export const register = async (data: any) => {
     return response.data;
 };
 
-export const getGameToken = async (gameId: string) => {
+export const getGameToken = async (gameId: string, jwtToken?: string) => {
     console.log('[API Debug] getGameToken called with gameId:', gameId);
-    console.log('[API Debug] Auth header:', api.defaults.headers.common?.Authorization ? 'Bearer ***' : 'none');
+    console.log('[API Debug] Auth header from param:', jwtToken ? 'Bearer ***' : 'none');
+    console.log('[API Debug] Auth header from localStorage:', typeof window !== 'undefined' && localStorage.getItem('jwt_token') ? 'Bearer ***' : 'none');
 
-    const response = await api.post(`/game-stats/${gameId}`);
+    // Use token from parameter if provided, otherwise fall back to default interceptor
+    const config = jwtToken ? {
+        headers: { Authorization: `Bearer ${jwtToken}` }
+    } : undefined;
+
+    const response = await api.post(`/game-stats/${gameId}`, {}, config);
 
     console.log('[API Debug] getGameToken raw response:', {
         status: response.status,

@@ -38,7 +38,8 @@ export default function PlayGame() {
   }, []);
 
   const authenUser = async (): Promise<InfoType> => {
-    const data = await getGameToken(GAME_ID);
+    // Pass the JWT token directly from AuthContext to the API call
+    const data = await getGameToken(GAME_ID, jwtToken || undefined);
 
     // Check if guest user needs promotion
     if (data.username && data.username.toLowerCase().includes('guest')) {
