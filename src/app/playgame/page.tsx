@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/context/AuthContext";
 import { getGameToken, getGuestToken, updateGuestToken, manageGuestUser } from "@/lib/api";
@@ -22,6 +22,8 @@ export default function PlayGame() {
   const [userId, setUserId] = useState<string | null>(null);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [showChoice, setShowChoice] = useState<boolean>(false);
+  const [authFailed, setAuthFailed] = useState<boolean>(false); // Track if auth already failed to prevent retry loops
+  const initializingRef = useRef<boolean>(false); // Prevent concurrent initializations
 
   const setStateAndCookie = useCallback(({ token, userId, username }: InfoType) => {
     if (token && userId && username) {
@@ -74,17 +76,26 @@ export default function PlayGame() {
   };
 
   const initialize = useCallback(async () => {
+    // Prevent concurrent initializations
+    if (initializingRef.current) {
+      console.log("[PlayGame] Already initializing, skipping...");
+      return;
+    }
+    initializingRef.current = true;
+
     console.log("[PlayGame] Initializing v2 with:", {
       GAME_ID,
       hasJwtToken: !!jwtToken,
       jwtTokenPrefix: jwtToken ? jwtToken.substring(0, 10) + "..." : "none",
       status,
       showChoice,
+      authFailed,
       hasLocalUserId: !!getCookie("userId")
     });
 
     try {
-      if (jwtToken && jwtToken !== "unauthenticated") {
+      // Skip authenticated flow if auth already failed (401) to prevent retry loops
+      if (jwtToken && jwtToken !== "unauthenticated" && !authFailed) {
         console.log("[PlayGame] Attempting Authenticated Flow");
         const data = await authenUser();
         setStateAndCookie(data);
@@ -94,6 +105,7 @@ export default function PlayGame() {
         if (!showChoice && !token) {
           console.log("[PlayGame] Unauthenticated - Showing Choice View");
           setShowChoice(true);
+          initializingRef.current = false;
           return;
         }
 
@@ -115,6 +127,16 @@ export default function PlayGame() {
         configUrl: error.config?.url
       });
 
+      // On 401 Unauthorized, mark auth as failed and clear stale token
+      if (error.response?.status === 401) {
+        console.log("[PlayGame] 401 Unauthorized - Clearing stale JWT and falling back to guest");
+        setAuthFailed(true);
+        // Clear the stale JWT token from localStorage
+        if (typeof window !== 'undefined') {
+          localStorage.removeItem('jwt_token');
+        }
+      }
+
       // Strict v2 fallback: always try guest if any flow fails (as per documentation)
       try {
         console.log("[PlayGame] Any initialization failure results in Guest fallback (as per docs)");
@@ -124,20 +146,28 @@ export default function PlayGame() {
         console.error("[PlayGame] Fallback Error:", fallbackError);
         setErrorMsg("Failed to initialize game session even after guest fallback. Please check your internet connection and refresh.");
       }
+    } finally {
+      initializingRef.current = false;
     }
-  }, [jwtToken, status, setStateAndCookie, showChoice, token]);
+  }, [jwtToken, status, setStateAndCookie, showChoice, token, authFailed]);
 
   useEffect(() => {
+    // Don't re-initialize if we already have a token
+    if (token) {
+      console.log("[PlayGame] Already have token, skipping initialization");
+      return;
+    }
+
     if (!authLoading && status !== "loading") {
-      // If authenticated, always initialize
-      if (jwtToken && jwtToken !== "unauthenticated") {
+      // If authenticated and auth hasn't failed, try authenticated flow
+      if (jwtToken && jwtToken !== "unauthenticated" && !authFailed) {
         initialize();
       } else if (!token && !showChoice) {
-        // If unauthenticated and haven't started anything, show choice
+        // If unauthenticated or auth failed, show choice
         setShowChoice(true);
       }
     }
-  }, [authLoading, status, jwtToken, token, showChoice, initialize]);
+  }, [authLoading, status, jwtToken, token, showChoice, initialize, authFailed]);
 
   // Handle messages from iframe
   useEffect(() => {
