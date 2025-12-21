@@ -11,7 +11,7 @@ import { useSession } from "next-auth/react";
 type InfoType = { token: string; userId: string; username: string };
 
 const GAME_URL = process.env.NEXT_PUBLIC_GAME_URL || "https://tinylittleroyale.io/";
-const GAME_ID = process.env.NEXT_PUBLIC_GAME_ID || "tiny-little-fly";
+const GAME_ID = process.env.NEXT_PUBLIC_GAME_ID || "tiny-little-royale";
 
 export default function PlayGame() {
   const { token: jwtToken, loading: authLoading } = useAuth();

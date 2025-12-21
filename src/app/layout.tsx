@@ -9,7 +9,7 @@ const inter = Inter({ subsets: ["latin"] });
 
 export const metadata: Metadata = {
   title: "Tiny Little Royale",
-  description: "Fly, Shoot, Win! The ultimate mini battle royale.",
+  description: "A fast-paced 2.5D multiplayer battle game with three modes: Deathmatch, Capture the Flag, and Team Fight.",
 };
 
 export default function RootLayout({
