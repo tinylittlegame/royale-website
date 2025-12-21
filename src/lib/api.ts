@@ -43,21 +43,76 @@ export const register = async (data: any) => {
 };
 
 export const getGameToken = async (gameId: string) => {
+    console.log('[API Debug] getGameToken called with gameId:', gameId);
+    console.log('[API Debug] Auth header:', api.defaults.headers.common?.Authorization ? 'Bearer ***' : 'none');
+
     const response = await api.post(`/game-stats/${gameId}`);
-    return response.data.data;
+
+    console.log('[API Debug] getGameToken raw response:', {
+        status: response.status,
+        hasData: !!response.data,
+        hasNestedData: !!response.data?.data,
+        dataKeys: response.data ? Object.keys(response.data) : [],
+        nestedDataKeys: response.data?.data ? Object.keys(response.data.data) : [],
+        fullData: response.data
+    });
+
+    // Handle both response.data.data and response.data structures
+    const data = response.data?.data || response.data;
+    if (!data || !data.token) {
+        console.error('[API Debug] getGameToken - Missing token in response:', data);
+        throw new Error('Invalid game token response: missing token');
+    }
+    return data;
 };
 
 export const getGuestToken = async (gameId: string) => {
+    console.log('[API Debug] getGuestToken called with gameId:', gameId);
+
     const response = await api.post(`/game-stats/${gameId}/unprotected`);
-    return response.data.data;
+
+    console.log('[API Debug] getGuestToken raw response:', {
+        status: response.status,
+        hasData: !!response.data,
+        hasNestedData: !!response.data?.data,
+        dataKeys: response.data ? Object.keys(response.data) : [],
+        nestedDataKeys: response.data?.data ? Object.keys(response.data.data) : [],
+        fullData: response.data
+    });
+
+    // Handle both response.data.data and response.data structures
+    const data = response.data?.data || response.data;
+    if (!data || !data.token) {
+        console.error('[API Debug] getGuestToken - Missing token in response:', data);
+        throw new Error('Invalid guest token response: missing token');
+    }
+    return data;
 };
 
 export const updateGuestToken = async (gameId: string, userId: string, username: string) => {
+    console.log('[API Debug] updateGuestToken called with:', { gameId, userId, username });
+
     const response = await api.put(`/game-stats/${gameId}/unprotected`, {
         userId,
         username
     });
-    return response.data.data;
+
+    console.log('[API Debug] updateGuestToken raw response:', {
+        status: response.status,
+        hasData: !!response.data,
+        hasNestedData: !!response.data?.data,
+        dataKeys: response.data ? Object.keys(response.data) : [],
+        nestedDataKeys: response.data?.data ? Object.keys(response.data.data) : [],
+        fullData: response.data
+    });
+
+    // Handle both response.data.data and response.data structures
+    const data = response.data?.data || response.data;
+    if (!data || !data.token) {
+        console.error('[API Debug] updateGuestToken - Missing token in response:', data);
+        throw new Error('Invalid guest token update response: missing token');
+    }
+    return data;
 };
 
 export const manageGuestUser = async (userId: string) => {
