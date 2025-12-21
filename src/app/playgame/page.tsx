@@ -21,6 +21,7 @@ export default function PlayGame() {
   const [token, setToken] = useState<string | null>(null);
   const [userId, setUserId] = useState<string | null>(null);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
+  const [showChoice, setShowChoice] = useState<boolean>(false);
 
   const setStateAndCookie = useCallback(({ token, userId, username }: InfoType) => {
     if (token && userId && username) {
@@ -30,6 +31,7 @@ export default function PlayGame() {
 
       setToken(token);
       setUserId(userId);
+      setShowChoice(false);
     }
   }, []);
 
@@ -70,10 +72,17 @@ export default function PlayGame() {
         const data = await authenUser();
         setStateAndCookie(data);
       } else {
+        // Only auto-initialize if we aren't explicitly showing choice
+        // If unauthenticated and no choice made yet, show choice
+        if (!showChoice && !token) {
+          setShowChoice(true);
+          return;
+        }
+
         if (getCookie("userId")) {
           const data = await updateToken();
           setStateAndCookie(data);
-        } else if (jwtToken === "unauthenticated" || status === "unauthenticated") {
+        } else {
           const data = await guestUser();
           setStateAndCookie(data);
         }
@@ -81,20 +90,30 @@ export default function PlayGame() {
     } catch (error: any) {
       console.error("Initialization error:", error);
       try {
-        // Fallback to guest if something fails
-        const data = await guestUser();
-        setStateAndCookie(data);
+        // Fallback to guest ONLY if they already made the choice to play guest
+        if (!jwtToken || jwtToken === "unauthenticated") {
+          const data = await guestUser();
+          setStateAndCookie(data);
+        } else {
+          setErrorMsg("Failed to initialize game session. Please log in again.");
+        }
       } catch (fallbackError: any) {
         setErrorMsg("Failed to initialize game session");
       }
     }
-  }, [jwtToken, status, setStateAndCookie]);
+  }, [jwtToken, status, setStateAndCookie, showChoice, token]);
 
   useEffect(() => {
     if (!authLoading && status !== "loading") {
-      initialize();
+      // If authenticated, always initialize
+      if (jwtToken && jwtToken !== "unauthenticated") {
+        initialize();
+      } else if (!token && !showChoice) {
+        // If unauthenticated and haven't started anything, show choice
+        setShowChoice(true);
+      }
     }
-  }, [authLoading, status, initialize]);
+  }, [authLoading, status, jwtToken, token, showChoice, initialize]);
 
   // Handle messages from iframe
   useEffect(() => {
@@ -107,7 +126,54 @@ export default function PlayGame() {
     return () => window.removeEventListener("message", handleMessage);
   }, [router]);
 
-  if (authLoading || status === "loading" || !token) {
+  if (authLoading || status === "loading") {
+    return <LoadingScreen message="Checking Authentication" />;
+  }
+
+  if (showChoice) {
+    return (
+      <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/90 backdrop-blur-md">
+        <div className="max-w-md w-full mx-4 p-8 bg-zinc-900 border border-yellow-500/30 rounded-2xl shadow-2xl shadow-yellow-500/10 text-center">
+          <h2 className="text-3xl font-black text-white mb-2 uppercase tracking-tighter">Ready for Battle?</h2>
+          <p className="text-gray-400 mb-8">Choose how you want to enter the Royale</p>
+
+          <div className="flex flex-col gap-4">
+            <button
+              onClick={() => router.push("/auth/signin?callbackUrl=/playgame")}
+              className="group relative px-8 py-4 bg-yellow-500 hover:bg-yellow-400 text-black font-bold rounded-xl transition-all transform hover:scale-[1.02] active:scale-[0.98]"
+            >
+              <div className="relative z-10 flex items-center justify-center gap-2">
+                <span className="uppercase tracking-widest">Login to Account</span>
+              </div>
+              <div className="absolute inset-0 bg-white/20 opacity-0 group-hover:opacity-100 transition-opacity rounded-xl"></div>
+            </button>
+
+            <div className="flex items-center gap-4 my-2">
+              <div className="h-px flex-1 bg-zinc-800"></div>
+              <span className="text-zinc-600 uppercase text-xs font-bold">OR</span>
+              <div className="h-px flex-1 bg-zinc-800"></div>
+            </div>
+
+            <button
+              onClick={() => {
+                setShowChoice(false);
+                initialize();
+              }}
+              className="px-8 py-4 bg-zinc-800 hover:bg-zinc-700 text-white font-bold rounded-xl border border-zinc-700 transition-all transform hover:scale-[1.02] active:scale-[0.98]"
+            >
+              <span className="uppercase tracking-widest opacity-80 group-hover:opacity-100">Play as Guest</span>
+            </button>
+          </div>
+
+          <p className="mt-8 text-zinc-500 text-xs uppercase tracking-widest leading-relaxed">
+            Guest sessions do not save progress<br />or leaderboard statistics
+          </p>
+        </div>
+      </div>
+    );
+  }
+
+  if (!token) {
     return <LoadingScreen message="Initializing Royale Session" />;
   }
 
