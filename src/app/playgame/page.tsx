@@ -147,6 +147,8 @@ export default function PlayGame() {
     }
   }, [jwtToken, status, setStateAndCookie, showChoice, token, authFailed]);
 
+  const hasRedirectedRef = useRef<boolean>(false); // Prevent multiple redirects
+
   useEffect(() => {
     // Don't re-initialize if we already have a token
     if (token) {
@@ -154,15 +156,41 @@ export default function PlayGame() {
       return;
     }
 
-    if (!authLoading && status !== "loading") {
-      // If authenticated and auth hasn't failed, try authenticated flow
-      if (jwtToken && jwtToken !== "unauthenticated" && !authFailed) {
-        initialize();
-      } else if (!token) {
-        // If unauthenticated, redirect directly to login page
-        console.log("[PlayGame] Unauthenticated - Redirecting to login page");
-        router.push("/auth/signin?callbackUrl=/playgame");
-      }
+    // Don't do anything if already redirected
+    if (hasRedirectedRef.current) {
+      return;
+    }
+
+    // Wait for both auth loading states to settle
+    if (authLoading || status === "loading") {
+      console.log("[PlayGame] Still loading auth state...", { authLoading, status });
+      return;
+    }
+
+    console.log("[PlayGame] Auth state settled:", {
+      hasJwtToken: !!jwtToken,
+      sessionStatus: status,
+      authFailed
+    });
+
+    // If we have a JWT token and auth hasn't failed, initialize
+    if (jwtToken && jwtToken !== "unauthenticated" && !authFailed) {
+      initialize();
+      return;
+    }
+
+    // If there's an authenticated NextAuth session but no JWT token yet,
+    // wait for AuthContext to exchange it (give it a moment)
+    if (status === "authenticated" && !jwtToken) {
+      console.log("[PlayGame] NextAuth session exists, waiting for JWT exchange...");
+      return;
+    }
+
+    // Only redirect if truly unauthenticated (no session, no token)
+    if (status === "unauthenticated" && !jwtToken && !authFailed) {
+      console.log("[PlayGame] Confirmed unauthenticated - Redirecting to login page");
+      hasRedirectedRef.current = true;
+      router.push("/auth/signin?callbackUrl=/playgame");
     }
   }, [authLoading, status, jwtToken, token, initialize, authFailed, router]);
 
@@ -258,7 +286,7 @@ export default function PlayGame() {
   const finalGameUrl = `${GAME_URL}?user=${userId}&login-token=${token}${branch}`;
 
   return (
-    <div className="w-full h-[calc(100vh-64px)] bg-black relative">
+    <div className="w-full h-screen bg-black relative">
       <iframe
         src={finalGameUrl}
         className="w-full h-full border-none"
