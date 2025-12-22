@@ -102,7 +102,7 @@ export async function POST(req: NextRequest) {
           id: userData.id,
           authUserId: userData.authUserId,
           email: userData.email,
-          displayName: userData.displayName,
+          name: userData.displayName, // Normalize displayName to name
           photo: userData.photo,
           country: userData.country,
           authProviders: userData.authProviders,
