@@ -12,7 +12,7 @@ const Footer = () => {
                     <div className="col-span-1 md:col-span-2">
                         <h3 className="text-white text-lg font-bold mb-4">Tiny Little Royale</h3>
                         <p className="text-gray-400 text-sm max-w-sm">
-                            Join the ultimate battle royale experience. Fly, shoot, and conquer the arena in this fast-paced multiplayer shooter.
+                            The ultimate multiplayer battle where chaos meets strategy! Jump into action-packed matches, pick your character, and unleash powerful weapons in a top-down shooter royale. Whether you prefer close-range combat or long-distance precision shots, every battle is an adrenaline rush!
                         </p>
                     </div>
 
@@ -20,17 +20,17 @@ const Footer = () => {
                         <h3 className="text-white text-lg font-bold mb-4">Social</h3>
                         <ul className="space-y-2">
                             <li>
-                                <a href={process.env.JOIN_DISCORD || "https://discord.gg/tinylittle"} target="_blank" rel="noopener noreferrer" className="text-gray-400 hover:text-purple-400 flex items-center gap-2 transition-colors">
+                                <a href={process.env.JOIN_DISCORD || "https://discord.gg/USUhhHVHt7"} target="_blank" rel="noopener noreferrer" className="text-gray-400 hover:text-purple-400 flex items-center gap-2 transition-colors">
                                     Discord
                                 </a>
                             </li>
                             <li>
-                                <a href="https://facebook.com/tinylittleroyale" target="_blank" rel="noopener noreferrer" className="text-gray-400 hover:text-blue-500 flex items-center gap-2 transition-colors">
+                                <a href="https://facebook.com/tinylittleapp" target="_blank" rel="noopener noreferrer" className="text-gray-400 hover:text-blue-500 flex items-center gap-2 transition-colors">
                                     Facebook
                                 </a>
                             </li>
                             <li>
-                                <a href="https://t.me/tinylittleroyale" target="_blank" rel="noopener noreferrer" className="text-gray-400 hover:text-blue-400 flex items-center gap-2 transition-colors">
+                                <a href="https://t.me/tinylittlegame" target="_blank" rel="noopener noreferrer" className="text-gray-400 hover:text-blue-400 flex items-center gap-2 transition-colors">
                                     Telegram
                                 </a>
                             </li>
