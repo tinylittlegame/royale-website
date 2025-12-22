@@ -5,14 +5,17 @@ import { motion } from 'framer-motion';
 import { useState, useEffect } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
-import { Apple } from 'lucide-react';
+import { Apple, Loader2 } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
 import { signIn } from 'next-auth/react';
 
 export default function SignIn() {
     const searchParams = useSearchParams();
-    const router = useRouter(); // Initialize router
-    const { login, loading: authLoading, user } = useAuth(); // rename loading to avoid conflict, get user
+    const router = useRouter();
+    const { login, loading: authLoading, user } = useAuth();
+
+    // Get error from URL params (NextAuth errors)
+    const errorParam = searchParams.get('error');
 
     // Redirect if already logged in
     useEffect(() => {
@@ -21,36 +24,59 @@ export default function SignIn() {
             router.push(callbackUrl);
         }
     }, [user, authLoading, router, searchParams]);
+
     const [loading, setLoading] = useState(false);
+    const [loadingProvider, setLoadingProvider] = useState<string | null>(null);
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
     const [error, setError] = useState('');
 
+    // Set error from URL params
+    useEffect(() => {
+        if (errorParam) {
+            const errorMessages: Record<string, string> = {
+                'OAuthSignin': 'Error starting OAuth sign in. Please try again.',
+                'OAuthCallback': 'Error during OAuth callback. Please try again.',
+                'OAuthCreateAccount': 'Could not create account. Please try again.',
+                'EmailCreateAccount': 'Could not create account. Please try again.',
+                'Callback': 'Error during login callback. Please try again.',
+                'OAuthAccountNotLinked': 'This email is already linked to another account.',
+                'AccessDenied': 'Access denied. You may have cancelled the login.',
+                'Verification': 'Token expired or invalid.',
+                'Default': 'An error occurred during sign in. Please try again.',
+            };
+            setError(errorMessages[errorParam] || errorMessages['Default']);
+        }
+    }, [errorParam]);
+
     const handleCredentialsLogin = async (e: React.FormEvent) => {
         e.preventDefault();
         setLoading(true);
+        setLoadingProvider('email');
         setError('');
         try {
             await login(email, password);
-        } catch (err) {
-            setError('Invalid credentials');
+        } catch (err: any) {
+            setError(err?.message || 'Invalid credentials');
             setLoading(false);
+            setLoadingProvider(null);
         }
     };
 
     const handleOAuthLogin = async (provider: string) => {
         setLoading(true);
+        setLoadingProvider(provider);
+        setError('');
 
-        // Get the final destination from URL params (e.g., /playgame)
         const callbackUrl = searchParams.get('callbackUrl') || '/';
 
-        // Use NextAuth signIn - it will handle OAuth flow
-        // After successful OAuth, AuthContext will automatically exchange for JWT
         await signIn(provider, {
             redirect: true,
             callbackUrl: callbackUrl
         });
     };
+
+    const isProviderLoading = (provider: string) => loadingProvider === provider;
 
     return (
         <div className="min-h-screen bg-black flex items-center justify-center p-4 relative overflow-hidden">
@@ -96,6 +122,7 @@ export default function SignIn() {
                                 onChange={(e) => setEmail(e.target.value)}
                                 className="w-full bg-black/50 border border-white/10 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-yellow-500 transition-colors"
                                 required
+                                disabled={loading}
                             />
                         </div>
                         <div>
@@ -106,14 +133,19 @@ export default function SignIn() {
                                 onChange={(e) => setPassword(e.target.value)}
                                 className="w-full bg-black/50 border border-white/10 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-yellow-500 transition-colors"
                                 required
+                                disabled={loading}
                             />
                         </div>
                         <button
                             type="submit"
                             disabled={loading || authLoading}
-                            className="w-full h-12 bg-yellow-500 hover:bg-yellow-400 text-black font-bold rounded-xl flex items-center justify-center gap-3 transition-colors"
+                            className="w-full h-12 bg-yellow-500 hover:bg-yellow-400 text-black font-bold rounded-xl flex items-center justify-center gap-3 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                         >
-                            <span>Login with Email</span>
+                            {isProviderLoading('email') ? (
+                                <Loader2 className="h-5 w-5 animate-spin" />
+                            ) : (
+                                <span>Login with Email</span>
+                            )}
                         </button>
                     </form>
 
@@ -121,58 +153,73 @@ export default function SignIn() {
                     <button
                         onClick={() => handleOAuthLogin('google')}
                         disabled={loading}
-                        className="w-full h-14 bg-white hover:bg-gray-100 text-black font-bold rounded-xl flex items-center justify-center gap-3 transition-colors relative overflow-hidden group"
+                        className="w-full h-14 bg-white hover:bg-gray-100 text-black font-bold rounded-xl flex items-center justify-center gap-3 transition-colors relative overflow-hidden group disabled:opacity-50 disabled:cursor-not-allowed"
                     >
-                        <Image src="https://authjs.dev/img/providers/google.svg" width={24} height={24} alt="Google" />
-                        <span>Continue with Google</span>
+                        {isProviderLoading('google') ? (
+                            <Loader2 className="h-5 w-5 animate-spin" />
+                        ) : (
+                            <>
+                                <Image src="https://authjs.dev/img/providers/google.svg" width={24} height={24} alt="Google" />
+                                <span>Continue with Google</span>
+                            </>
+                        )}
                     </button>
 
                     {/* Facebook */}
                     <button
                         onClick={() => handleOAuthLogin('facebook')}
                         disabled={loading}
-                        className="w-full h-14 bg-[#1877F2] hover:bg-[#166fe5] text-white font-bold rounded-xl flex items-center justify-center gap-3 transition-colors"
+                        className="w-full h-14 bg-[#1877F2] hover:bg-[#166fe5] text-white font-bold rounded-xl flex items-center justify-center gap-3 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                     >
-                        <Image src="https://authjs.dev/img/providers/facebook.svg" width={24} height={24} alt="Facebook" />
-                        <span>Continue with Facebook</span>
+                        {isProviderLoading('facebook') ? (
+                            <Loader2 className="h-5 w-5 animate-spin" />
+                        ) : (
+                            <>
+                                <Image src="https://authjs.dev/img/providers/facebook.svg" width={24} height={24} alt="Facebook" />
+                                <span>Continue with Facebook</span>
+                            </>
+                        )}
                     </button>
 
                     {/* Line */}
                     <button
                         onClick={() => handleOAuthLogin('line')}
                         disabled={loading}
-                        className="w-full h-14 bg-[#06C755] hover:bg-[#05b54d] text-white font-bold rounded-xl flex items-center justify-center gap-3 transition-colors"
+                        className="w-full h-14 bg-[#06C755] hover:bg-[#05b54d] text-white font-bold rounded-xl flex items-center justify-center gap-3 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                     >
-                        <Image src="https://authjs.dev/img/providers/line.svg" width={24} height={24} alt="Line" />
-                        <span>Continue with Line</span>
+                        {isProviderLoading('line') ? (
+                            <Loader2 className="h-5 w-5 animate-spin" />
+                        ) : (
+                            <>
+                                <Image src="https://authjs.dev/img/providers/line.svg" width={24} height={24} alt="Line" />
+                                <span>Continue with Line</span>
+                            </>
+                        )}
                     </button>
 
-                    {/* Apple - Placeholder for now / Lower Priority */}
+                    {/* Apple - Coming Soon */}
                     <button
-                        onClick={() => handleOAuthLogin('apple')} // assuming apple endpoint exists or placeholder logic
-                        disabled={loading}
-                        className="w-full h-14 bg-white/10 hover:bg-white/20 text-white font-bold rounded-xl flex items-center justify-center gap-3 transition-colors border border-white/10"
+                        disabled
+                        className="w-full h-14 bg-white/5 text-white/40 font-bold rounded-xl flex items-center justify-center gap-3 border border-white/10 cursor-not-allowed"
                     >
-                        <Apple fill="white" size={24} />
-                        <span>Continue with Apple</span>
+                        <Apple size={24} />
+                        <span>Apple - Coming Soon</span>
                     </button>
 
-                    {/* Telegram - Placeholder */}
+                    {/* Telegram - Coming Soon */}
                     <button
-                        onClick={() => alert("Telegram Login Coming Soon!")}
-                        disabled={loading}
-                        className="w-full h-14 bg-[#229ED9] hover:bg-[#1f8ec2] text-white font-bold rounded-xl flex items-center justify-center gap-3 transition-colors"
+                        disabled
+                        className="w-full h-14 bg-white/5 text-white/40 font-bold rounded-xl flex items-center justify-center gap-3 border border-white/10 cursor-not-allowed"
                     >
-                        {/* Telegram Icon SVG */}
                         <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                            <path d="M20.665 3.717L2.946 10.554C1.944 10.954 1.942 11.512 2.753 11.761L7.303 13.18L17.834 6.541C18.332 6.237 18.789 6.406 18.415 6.738L9.888 14.432V14.431L9.88 14.444L9.567 19.123C10.024 19.123 10.226 18.913 10.481 18.667L12.677 16.53L17.243 19.904C18.085 20.368 18.691 20.129 18.9 19.123L21.905 5.034C22.212 3.804 21.436 3.245 20.665 3.717Z" fill="white" />
+                            <path d="M20.665 3.717L2.946 10.554C1.944 10.954 1.942 11.512 2.753 11.761L7.303 13.18L17.834 6.541C18.332 6.237 18.789 6.406 18.415 6.738L9.888 14.432V14.431L9.88 14.444L9.567 19.123C10.024 19.123 10.226 18.913 10.481 18.667L12.677 16.53L17.243 19.904C18.085 20.368 18.691 20.129 18.9 19.123L21.905 5.034C22.212 3.804 21.436 3.245 20.665 3.717Z" fill="currentColor" />
                         </svg>
-                        <span>Continue with Telegram</span>
+                        <span>Telegram - Coming Soon</span>
                     </button>
                 </div>
 
                 <div className="mt-8 text-center text-sm text-gray-500">
-                    By logging in, you agree to our <a href="#" className="underline hover:text-white">Terms</a> and <a href="#" className="underline hover:text-white">Privacy Policy</a>.
+                    By logging in, you agree to our <Link href="/terms" className="underline hover:text-white">Terms</Link> and <Link href="/privacy" className="underline hover:text-white">Privacy Policy</Link>.
                 </div>
             </motion.div>
         </div>

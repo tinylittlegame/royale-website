@@ -21,6 +21,20 @@ export const authOptions: NextAuthOptions = {
         FacebookProvider({
             clientId: process.env.FACEBOOK_CLIENT_ID || '',
             clientSecret: process.env.FACEBOOK_CLIENT_SECRET || '',
+            authorization: {
+                params: {
+                    scope: 'email public_profile',
+                },
+            },
+            // Facebook returns profile info differently
+            profile(profile) {
+                return {
+                    id: profile.id,
+                    name: profile.name,
+                    email: profile.email,
+                    image: profile.picture?.data?.url,
+                };
+            },
         }),
         // Line provider configuration
         {
@@ -31,16 +45,36 @@ export const authOptions: NextAuthOptions = {
             clientSecret: process.env.LINE_CLIENT_SECRET || '',
             authorization: {
                 url: 'https://access.line.me/oauth2/v2.1/authorize',
-                params: { scope: 'profile openid email' },
+                params: {
+                    scope: 'profile openid email',
+                    response_type: 'code',
+                },
             },
             token: 'https://api.line.me/oauth2/v2.1/token',
             userinfo: 'https://api.line.me/v2/profile',
-            profile(profile: any) {
+            // Line returns email in the ID token, not in userinfo
+            idToken: true,
+            profile(profile: any, tokens: any) {
+                // Try to get email from ID token claims
+                let email = profile.email;
+
+                // If email not in profile, try to decode from ID token
+                if (!email && tokens.id_token) {
+                    try {
+                        const payload = JSON.parse(
+                            Buffer.from(tokens.id_token.split('.')[1], 'base64').toString()
+                        );
+                        email = payload.email;
+                    } catch (e) {
+                        console.log('[Line Auth] Could not decode email from ID token');
+                    }
+                }
+
                 return {
-                    id: profile.userId,
-                    name: profile.displayName,
-                    email: profile.email || `${profile.userId}@line.me`,
-                    image: profile.pictureUrl,
+                    id: profile.userId || profile.sub,
+                    name: profile.displayName || profile.name,
+                    email: email || `${profile.userId || profile.sub}@line.me`,
+                    image: profile.pictureUrl || profile.picture,
                 };
             },
         },
@@ -56,20 +90,21 @@ export const authOptions: NextAuthOptions = {
             if (account) {
                 token.provider = account.provider;
                 token.accessToken = account.access_token;
+                console.log(`[Auth] JWT callback - provider: ${account.provider}`);
             }
             if (profile) {
                 token.email = profile.email || token.email;
-                token.name = profile.name || token.name;
-                token.picture = profile.picture || profile.image || token.picture;
+                token.name = profile.name || profile.displayName || token.name;
+                token.picture = profile.picture || profile.image || profile.pictureUrl || token.picture;
             }
             return token;
         },
         async session({ session, token }: { session: Session; token: JWT }) {
             // Send properties to the client
             if (session.user) {
-                session.user.email = token.email || '';
-                session.user.name = token.name || '';
-                session.user.image = token.picture as string || '';
+                session.user.email = (token.email as string) || '';
+                session.user.name = (token.name as string) || '';
+                session.user.image = (token.picture as string) || '';
             }
             // Add provider info
             (session as any).provider = token.provider;
@@ -80,4 +115,5 @@ export const authOptions: NextAuthOptions = {
         signIn: '/auth/signin',
         error: '/auth/signin',
     },
+    debug: process.env.NODE_ENV === 'development',
 };
