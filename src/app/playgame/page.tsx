@@ -158,12 +158,13 @@ export default function PlayGame() {
       // If authenticated and auth hasn't failed, try authenticated flow
       if (jwtToken && jwtToken !== "unauthenticated" && !authFailed) {
         initialize();
-      } else if (!token && !showChoice) {
-        // If unauthenticated or auth failed, show choice
-        setShowChoice(true);
+      } else if (!token) {
+        // If unauthenticated, redirect directly to login page
+        console.log("[PlayGame] Unauthenticated - Redirecting to login page");
+        router.push("/auth/signin?callbackUrl=/playgame");
       }
     }
-  }, [authLoading, status, jwtToken, token, showChoice, initialize, authFailed]);
+  }, [authLoading, status, jwtToken, token, initialize, authFailed, router]);
 
   // Handle messages from iframe
   useEffect(() => {

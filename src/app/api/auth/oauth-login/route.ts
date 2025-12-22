@@ -32,17 +32,29 @@ interface BackendAuthResponse {
 export async function POST(req: NextRequest) {
   try {
     const body: OAuthLoginRequest = await req.json();
-    const { email, name, image, provider } = body;
+    let { email, name, image, provider } = body;
+
+    console.log(`[OAuth Login] Received request for provider: ${provider}`, {
+      email: email ? '***@***' : 'missing',
+      name: name ? 'provided' : 'missing',
+    });
 
     // Validate required fields
-    if (!email || !name || !provider) {
+    if (!name || !provider) {
       return NextResponse.json(
-        { error: "Missing required fields: email, name, provider" },
+        { error: "Missing required fields: name, provider" },
         { status: 400 },
       );
     }
 
+    // Generate fallback email if not provided (some providers don't return email)
+    if (!email) {
+      console.log(`[OAuth Login] No email from ${provider}, generating fallback`);
+      email = `${provider}_${Date.now()}@noemail.tinylittle.io`;
+    }
+
     // Call backend to authenticate and get JWT
+    console.log(`[OAuth Login] Calling backend: ${BACKEND_API_URL}/auth/login`);
     const response = await fetch(`${BACKEND_API_URL}/auth/login`, {
       method: "POST",
       headers: {
