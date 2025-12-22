@@ -1,7 +1,17 @@
 import { NextRequest, NextResponse } from "next/server";
+import { getDb, getAuth } from "@/lib/firebase-admin";
+import jwt from "jsonwebtoken";
 
-// Backend API URL
-const BACKEND_API_URL = process.env.NEXT_PUBLIC_API_URL;
+// Use NEXTAUTH_SECRET for JWT signing
+// Your .env says: "JWT Secret (same as backend for token compatibility)"
+const JWT_SECRET = process.env.NEXTAUTH_SECRET;
+const JWT_EXPIRES_IN = "30d"; // 30 days (same as backend)
+
+if (!JWT_SECRET) {
+  console.error("[OAuth Login] NEXTAUTH_SECRET is not set!");
+} else {
+  console.log("[OAuth Login] Using NEXTAUTH_SECRET for JWT signing");
+}
 
 interface OAuthLoginRequest {
   email: string;
@@ -22,56 +32,126 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    console.log("[OAuth Login] Forwarding OAuth login to backend:", {
-      email,
-      name,
-      provider,
-      backendUrl: BACKEND_API_URL,
-    });
-
-    // Call backend API to handle OAuth login and JWT generation
-    const backendResponse = await fetch(`${BACKEND_API_URL}/auth/oauth/login`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        email,
-        displayName: name,
-        photo: image,
-        provider,
-      }),
-    });
-
-    if (!backendResponse.ok) {
-      const errorData = await backendResponse.json().catch(() => ({}));
-      console.error("[OAuth Login] Backend returned error:", {
-        status: backendResponse.status,
-        statusText: backendResponse.statusText,
-        error: errorData,
-      });
-
+    // Check if JWT_SECRET is available
+    if (!JWT_SECRET) {
+      console.error("[OAuth Login] NEXTAUTH_SECRET is not set!");
       return NextResponse.json(
-        {
-          error: "Backend OAuth login failed",
-          message: errorData.message || backendResponse.statusText,
-          details:
-            process.env.NODE_ENV === "development" ? errorData : undefined,
-        },
-        { status: backendResponse.status },
+        { error: "Server configuration error: NEXTAUTH_SECRET not set" },
+        { status: 500 },
       );
     }
 
-    // Backend returns { token, user }
-    const data = await backendResponse.json();
+    // Get Firebase instances
+    let auth, db;
+    try {
+      auth = getAuth();
+      db = getDb();
+    } catch (firebaseError: any) {
+      console.error("[OAuth Login] Firebase initialization error:", firebaseError);
+      return NextResponse.json(
+        {
+          error: "Firebase initialization failed",
+          message: firebaseError.message,
+          details:
+            process.env.NODE_ENV === "development"
+              ? firebaseError.stack
+              : undefined,
+        },
+        { status: 500 },
+      );
+    }
 
-    console.log("[OAuth Login] Backend response received:", {
-      hasToken: !!data.token,
-      hasUser: !!data.user,
-      userId: data.user?.id,
+    // Step 1: Get or create Firebase Auth user
+    let firebaseUser;
+    try {
+      firebaseUser = await auth.getUserByEmail(email);
+    } catch (error) {
+      // User doesn't exist, create new Firebase Auth user
+      firebaseUser = await auth.createUser({
+        email,
+        displayName: name,
+        photoURL: image,
+      });
+    }
+
+    // Step 2: Get or create user document in Firestore
+    const usersRef = db.collection("users");
+    const userDoc = await usersRef.doc(firebaseUser.uid).get();
+
+    let userData: any;
+
+    if (userDoc.exists) {
+      // User exists, get data
+      userData = userDoc.data() || {};
+
+      // Update auth providers if needed
+      const authProviders = userData.authProviders || [];
+      const providerExists = authProviders.some(
+        (p: any) => p.providerId === provider,
+      );
+
+      if (!providerExists) {
+        authProviders.push({
+          providerId: provider,
+          uid: firebaseUser.uid,
+        });
+
+        await usersRef.doc(firebaseUser.uid).update({
+          authProviders,
+          updateAt: new Date(),
+        });
+      }
+    } else {
+      // Create new user document
+      userData = {
+        id: firebaseUser.uid,
+        authUserId: firebaseUser.uid,
+        email: email,
+        displayName: name,
+        photo: image || "",
+        country: "unknown", // Will be set from IP later
+        authProviders: [
+          {
+            providerId: provider,
+            uid: firebaseUser.uid,
+          },
+        ],
+        registerAt: new Date(),
+        createAt: new Date(),
+        updateAt: new Date(),
+      };
+
+      await usersRef.doc(firebaseUser.uid).set(userData);
+    }
+
+    // Step 3: Generate JWT token using NEXTAUTH_SECRET
+    // This matches the backend's JWT signing secret (as per .env comment)
+    const tokenPayload = {
+      type: "PASSPORT_TOKEN",
+      user: {
+        id: userData?.id || firebaseUser.uid,
+        authUserId: firebaseUser.uid,
+        email: userData?.email || email,
+        displayName: userData?.displayName || name,
+        photo: userData?.photo || image || "",
+        country: userData?.country || "unknown",
+        authProviders: userData?.authProviders || [],
+      },
+    };
+
+    const token = jwt.sign(tokenPayload, JWT_SECRET, {
+      expiresIn: JWT_EXPIRES_IN,
     });
 
-    return NextResponse.json(data, { status: 200 });
+    console.log("[OAuth Login] JWT token generated successfully for:", email);
+
+    // Step 4: Return response (same format as backend)
+    const response = {
+      token,
+      user: tokenPayload.user,
+    };
+
+    return NextResponse.json(response, { status: 200 });
   } catch (error: any) {
     console.error("[OAuth Login] Error:", error);
     return NextResponse.json(
