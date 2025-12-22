@@ -1,147 +1,157 @@
-import axios from 'axios';
+import axios from "axios";
 
-// Create an axios instance with the base URL
+/**
+ * Axios instance configured for the Tiny Little backend API
+ */
 const api = axios.create({
-    baseURL: process.env.NEXT_PUBLIC_API_URL || 'https://tinybackend-dev.tinylittle.xyz/api',
-    headers: {
-        'Content-Type': 'application/json',
-    },
+  baseURL: process.env.NEXT_PUBLIC_API_URL,
+  headers: {
+    "Content-Type": "application/json",
+  },
 });
 
-// Add a request interceptor to include the JWT token
-api.interceptors.request.use((config) => {
-    if (typeof window !== 'undefined') {
-        const token = localStorage.getItem('jwt_token');
-        if (token) {
-            config.headers.Authorization = `Bearer ${token}`;
-        }
+/**
+ * Request interceptor to automatically include JWT token in requests
+ */
+api.interceptors.request.use(
+  (config) => {
+    if (typeof window !== "undefined") {
+      const token = localStorage.getItem("jwt_token");
+      if (token) {
+        config.headers.Authorization = `Bearer ${token}`;
+      }
     }
     return config;
-}, (error) => {
+  },
+  (error) => {
     return Promise.reject(error);
-});
+  },
+);
 
-// Add a response interceptor for global error logging
-api.interceptors.response.use((response) => response, (error) => {
-    if (typeof window !== 'undefined') {
-        const status = error.response?.status;
-        const url = error.config?.url;
-        const method = error.config?.method?.toUpperCase();
-        console.error(`[API Error] ${method} ${url} returned ${status}`, error.response?.data);
+/**
+ * Response interceptor for global error handling
+ */
+api.interceptors.response.use(
+  (response) => response,
+  (error) => {
+    if (typeof window !== "undefined") {
+      const status = error.response?.status;
+      const url = error.config?.url;
+      const method = error.config?.method?.toUpperCase();
+      console.error(
+        `[API Error] ${method} ${url} returned ${status}`,
+        error.response?.data,
+      );
     }
     return Promise.reject(error);
-});
+  },
+);
 
+/**
+ * Authenticate user with email and password
+ */
 export const login = async (email: string, password: string) => {
-    const response = await api.post('/auth/credentials/login', { email, password });
-    return response.data;
+  const response = await api.post("/auth/credentials/login", {
+    email,
+    password,
+  });
+  return response.data;
 };
 
+/**
+ * Register a new user
+ */
 export const register = async (data: any) => {
-    const response = await api.post('/auth/register', data);
-    return response.data;
+  const response = await api.post("/auth/register", data);
+  return response.data;
 };
 
+/**
+ * Generate a game token for authenticated users
+ * @param gameId - The game identifier
+ * @param jwtToken - Optional JWT token to override the default from localStorage
+ */
 export const getGameToken = async (gameId: string, jwtToken?: string) => {
-    console.log('[API Debug] getGameToken called with gameId:', gameId);
-    console.log('[API Debug] Auth header from param:', jwtToken ? 'Bearer ***' : 'none');
-    console.log('[API Debug] Auth header from localStorage:', typeof window !== 'undefined' && localStorage.getItem('jwt_token') ? 'Bearer ***' : 'none');
+  const config = jwtToken
+    ? {
+        headers: { Authorization: `Bearer ${jwtToken}` },
+      }
+    : undefined;
 
-    // Use token from parameter if provided, otherwise fall back to default interceptor
-    const config = jwtToken ? {
-        headers: { Authorization: `Bearer ${jwtToken}` }
-    } : undefined;
+  const response = await api.post(`/game-stats/${gameId}`, {}, config);
+  const data = response.data?.data || response.data;
 
-    const response = await api.post(`/game-stats/${gameId}`, {}, config);
+  if (!data || !data.token) {
+    throw new Error("Invalid game token response: missing token");
+  }
 
-    console.log('[API Debug] getGameToken raw response:', {
-        status: response.status,
-        hasData: !!response.data,
-        hasNestedData: !!response.data?.data,
-        dataKeys: response.data ? Object.keys(response.data) : [],
-        nestedDataKeys: response.data?.data ? Object.keys(response.data.data) : [],
-        fullData: response.data
-    });
-
-    // Handle both response.data.data and response.data structures
-    const data = response.data?.data || response.data;
-    if (!data || !data.token) {
-        console.error('[API Debug] getGameToken - Missing token in response:', data);
-        throw new Error('Invalid game token response: missing token');
-    }
-    return data;
+  return data;
 };
 
+/**
+ * Generate a guest token for unauthenticated users
+ */
 export const getGuestToken = async (gameId: string) => {
-    console.log('[API Debug] getGuestToken called with gameId:', gameId);
+  const response = await api.post(`/game-stats/${gameId}/unprotected`);
+  const data = response.data?.data || response.data;
 
-    const response = await api.post(`/game-stats/${gameId}/unprotected`);
+  if (!data || !data.token) {
+    throw new Error("Invalid guest token response: missing token");
+  }
 
-    console.log('[API Debug] getGuestToken raw response:', {
-        status: response.status,
-        hasData: !!response.data,
-        hasNestedData: !!response.data?.data,
-        dataKeys: response.data ? Object.keys(response.data) : [],
-        nestedDataKeys: response.data?.data ? Object.keys(response.data.data) : [],
-        fullData: response.data
-    });
-
-    // Handle both response.data.data and response.data structures
-    const data = response.data?.data || response.data;
-    if (!data || !data.token) {
-        console.error('[API Debug] getGuestToken - Missing token in response:', data);
-        throw new Error('Invalid guest token response: missing token');
-    }
-    return data;
+  return data;
 };
 
-export const updateGuestToken = async (gameId: string, userId: string, username: string) => {
-    console.log('[API Debug] updateGuestToken called with:', { gameId, userId, username });
+/**
+ * Update guest user credentials
+ */
+export const updateGuestToken = async (
+  gameId: string,
+  userId: string,
+  username: string,
+) => {
+  const response = await api.put(`/game-stats/${gameId}/unprotected`, {
+    userId,
+    username,
+  });
 
-    const response = await api.put(`/game-stats/${gameId}/unprotected`, {
-        userId,
-        username
-    });
+  const data = response.data?.data || response.data;
 
-    console.log('[API Debug] updateGuestToken raw response:', {
-        status: response.status,
-        hasData: !!response.data,
-        hasNestedData: !!response.data?.data,
-        dataKeys: response.data ? Object.keys(response.data) : [],
-        nestedDataKeys: response.data?.data ? Object.keys(response.data.data) : [],
-        fullData: response.data
-    });
+  if (!data || !data.token) {
+    throw new Error("Invalid guest token update response: missing token");
+  }
 
-    // Handle both response.data.data and response.data structures
-    const data = response.data?.data || response.data;
-    if (!data || !data.token) {
-        console.error('[API Debug] updateGuestToken - Missing token in response:', data);
-        throw new Error('Invalid guest token update response: missing token');
-    }
-    return data;
+  return data;
 };
 
+/**
+ * Manage guest user account (promote to full account)
+ */
 export const manageGuestUser = async (userId: string) => {
-    const response = await api.put(`/api/users/${userId}/manage-guest-user`);
+  const response = await api.put(`/api/users/${userId}/manage-guest-user`);
+  return response.data;
+};
+
+/**
+ * Fetch leaderboard for a specific game and tournament type
+ */
+export const getLeaderboard = async (
+  gameId: string,
+  type: string = "monthly-deathmatch",
+  limit: number = 20,
+) => {
+  try {
+    const response = await api.get(
+      `/games/${gameId}/tournaments/${type}/leaderboard`,
+      {
+        params: { limit },
+      },
+    );
     return response.data;
-};
-
-export const getLeaderboard = async (gameId: string, type: string = 'monthly-deathmatch', limit: number = 20) => {
-    try {
-        console.log(`Fetching leaderboard for ${gameId}/${type}...`);
-        const response = await api.get(`/games/${gameId}/tournaments/${type}/leaderboard`, {
-            params: { limit }
-        });
-        return response.data;
-    } catch (error) {
-        console.error("Failed to fetch leaderboard:", error);
-        return [];
-    }
-};
-
-export const syncUser = async (user: any, account: any) => {
-    // Deprecated with new auth flow, keeping for backward compatibility if needed temporarily
-    return true;
+  } catch (error) {
+    console.error("Failed to fetch leaderboard:", error);
+    return [];
+  }
 };
 
 export default api;

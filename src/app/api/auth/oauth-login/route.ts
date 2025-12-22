@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 
-// Backend API URL - same as tinylittlefly uses
-const BACKEND_API_URL = process.env.NEXT_PUBLIC_API_URL || 'https://api.tinylittle.io/api';
+const BACKEND_API_URL = process.env.NEXT_PUBLIC_API_URL;
 
 interface OAuthLoginRequest {
   email: string;
@@ -10,11 +9,32 @@ interface OAuthLoginRequest {
   provider: string;
 }
 
+interface BackendAuthResponse {
+  token: string;
+  id: string;
+  authUserId: string;
+  email: string;
+  displayName: string;
+  photo: string;
+  country: string;
+  authProviders: Array<{
+    providerId: string;
+    uid: string;
+  }>;
+}
+
+/**
+ * OAuth Login API Route
+ *
+ * Exchanges OAuth provider data (from NextAuth) for a backend JWT token.
+ * The backend handles user creation/update and JWT generation.
+ */
 export async function POST(req: NextRequest) {
   try {
     const body: OAuthLoginRequest = await req.json();
     const { email, name, image, provider } = body;
 
+    // Validate required fields
     if (!email || !name || !provider) {
       return NextResponse.json(
         { error: "Missing required fields: email, name, provider" },
@@ -22,14 +42,7 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    console.log("[OAuth Login] Calling backend /api/auth/login with:", {
-      email,
-      name,
-      provider,
-    });
-
-    // Call backend /api/auth/login (same as tinylittlefly does)
-    // Backend will generate the JWT token
+    // Call backend to authenticate and get JWT
     const response = await fetch(`${BACKEND_API_URL}/auth/login`, {
       method: "POST",
       headers: {
@@ -40,38 +53,36 @@ export async function POST(req: NextRequest) {
         image: image || "",
         email,
         provider,
-        sub: "", // Optional, can be added if needed
+        sub: "",
       }),
     });
 
     if (!response.ok) {
       const errorText = await response.text();
-      console.error("[OAuth Login] Backend error:", {
+      console.error("[OAuth Login] Backend authentication failed:", {
         status: response.status,
         statusText: response.statusText,
-        body: errorText,
       });
 
       return NextResponse.json(
         {
           error: "Backend authentication failed",
           message: response.statusText,
-          details: errorText,
         },
         { status: response.status },
       );
     }
 
-    // Backend returns user object with JWT token
-    const userData = await response.json();
+    const userData: BackendAuthResponse = await response.json();
 
-    console.log("[OAuth Login] Backend returned user data:", {
-      hasToken: !!userData.token,
-      hasUser: !!userData.id,
-      email: userData.email,
-    });
+    // Validate response has required fields
+    if (!userData.token || !userData.id) {
+      throw new Error(
+        "Invalid response from backend: missing token or user ID",
+      );
+    }
 
-    // Return the same format as tinylittlefly expects
+    // Return normalized user data
     return NextResponse.json(
       {
         token: userData.token,
@@ -88,13 +99,11 @@ export async function POST(req: NextRequest) {
       { status: 200 },
     );
   } catch (error: any) {
-    console.error("[OAuth Login] Error:", error);
+    console.error("[OAuth Login] Unexpected error:", error);
     return NextResponse.json(
       {
         error: "OAuth login failed",
         message: error.message,
-        details:
-          process.env.NODE_ENV === "development" ? error.stack : undefined,
       },
       { status: 500 },
     );
