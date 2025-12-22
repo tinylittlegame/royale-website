@@ -54,15 +54,24 @@ const Navbar = () => {
                                     <span className="text-gray-300 text-sm">
                                         {user.name || user.email}
                                     </span>
-                                    {user.photo && (
+                                    {user.photo ? (
                                         <Image
                                             src={user.photo}
                                             alt="Profile"
                                             width={32}
                                             height={32}
                                             className="rounded-full ring-2 ring-yellow-500"
+                                            onError={(e) => {
+                                                // Hide broken image and show fallback
+                                                e.currentTarget.style.display = 'none';
+                                                const fallback = e.currentTarget.nextElementSibling;
+                                                if (fallback) fallback.classList.remove('hidden');
+                                            }}
                                         />
-                                    )}
+                                    ) : null}
+                                    <div className={`w-8 h-8 rounded-full ring-2 ring-yellow-500 bg-yellow-500 flex items-center justify-center text-black font-bold text-sm ${user.photo ? 'hidden' : ''}`}>
+                                        {(user.name || user.email || '?').charAt(0).toUpperCase()}
+                                    </div>
                                     <button
                                         onClick={() => logout()}
                                         className="text-gray-300 hover:text-white text-sm font-medium"
@@ -117,15 +126,23 @@ const Navbar = () => {
                             <div className="border-t border-gray-700 pt-4 pb-3">
                                 <div className="flex items-center px-5">
                                     <div className="flex-shrink-0">
-                                        {user.photo && (
+                                        {user.photo ? (
                                             <Image
                                                 src={user.photo}
                                                 alt="Profile"
                                                 width={40}
                                                 height={40}
                                                 className="rounded-full"
+                                                onError={(e) => {
+                                                    e.currentTarget.style.display = 'none';
+                                                    const fallback = e.currentTarget.nextElementSibling;
+                                                    if (fallback) fallback.classList.remove('hidden');
+                                                }}
                                             />
-                                        )}
+                                        ) : null}
+                                        <div className={`w-10 h-10 rounded-full bg-yellow-500 flex items-center justify-center text-black font-bold text-lg ${user.photo ? 'hidden' : ''}`}>
+                                            {(user.name || user.email || '?').charAt(0).toUpperCase()}
+                                        </div>
                                     </div>
                                     <div className="ml-3">
                                         <div className="text-base font-medium leading-none text-white">{user.name}</div>
