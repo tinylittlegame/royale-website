@@ -1,17 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getDb, getAuth } from "@/lib/firebase-admin";
-import jwt from "jsonwebtoken";
 
-// Use NEXTAUTH_SECRET for JWT signing
-// Your .env says: "JWT Secret (same as backend for token compatibility)"
-const JWT_SECRET = process.env.NEXTAUTH_SECRET;
-const JWT_EXPIRES_IN = "30d"; // 30 days (same as backend)
-
-if (!JWT_SECRET) {
-  console.error("[OAuth Login] NEXTAUTH_SECRET is not set!");
-} else {
-  console.log("[OAuth Login] Using NEXTAUTH_SECRET for JWT signing");
-}
+// Backend API URL - same as tinylittlefly uses
+const BACKEND_API_URL = process.env.NEXT_PUBLIC_API_URL || 'https://api.tinylittle.io/api';
 
 interface OAuthLoginRequest {
   email: string;
@@ -32,126 +22,71 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // Check if JWT_SECRET is available
-    if (!JWT_SECRET) {
-      console.error("[OAuth Login] NEXTAUTH_SECRET is not set!");
-      return NextResponse.json(
-        { error: "Server configuration error: NEXTAUTH_SECRET not set" },
-        { status: 500 },
-      );
-    }
-
-    // Get Firebase instances
-    let auth, db;
-    try {
-      auth = getAuth();
-      db = getDb();
-    } catch (firebaseError: any) {
-      console.error("[OAuth Login] Firebase initialization error:", firebaseError);
-      return NextResponse.json(
-        {
-          error: "Firebase initialization failed",
-          message: firebaseError.message,
-          details:
-            process.env.NODE_ENV === "development"
-              ? firebaseError.stack
-              : undefined,
-        },
-        { status: 500 },
-      );
-    }
-
-    // Step 1: Get or create Firebase Auth user
-    let firebaseUser;
-    try {
-      firebaseUser = await auth.getUserByEmail(email);
-    } catch (error) {
-      // User doesn't exist, create new Firebase Auth user
-      firebaseUser = await auth.createUser({
-        email,
-        displayName: name,
-        photoURL: image,
-      });
-    }
-
-    // Step 2: Get or create user document in Firestore
-    const usersRef = db.collection("users");
-    const userDoc = await usersRef.doc(firebaseUser.uid).get();
-
-    let userData: any;
-
-    if (userDoc.exists) {
-      // User exists, get data
-      userData = userDoc.data() || {};
-
-      // Update auth providers if needed
-      const authProviders = userData.authProviders || [];
-      const providerExists = authProviders.some(
-        (p: any) => p.providerId === provider,
-      );
-
-      if (!providerExists) {
-        authProviders.push({
-          providerId: provider,
-          uid: firebaseUser.uid,
-        });
-
-        await usersRef.doc(firebaseUser.uid).update({
-          authProviders,
-          updateAt: new Date(),
-        });
-      }
-    } else {
-      // Create new user document
-      userData = {
-        id: firebaseUser.uid,
-        authUserId: firebaseUser.uid,
-        email: email,
-        displayName: name,
-        photo: image || "",
-        country: "unknown", // Will be set from IP later
-        authProviders: [
-          {
-            providerId: provider,
-            uid: firebaseUser.uid,
-          },
-        ],
-        registerAt: new Date(),
-        createAt: new Date(),
-        updateAt: new Date(),
-      };
-
-      await usersRef.doc(firebaseUser.uid).set(userData);
-    }
-
-    // Step 3: Generate JWT token using NEXTAUTH_SECRET
-    // This matches the backend's JWT signing secret (as per .env comment)
-    const tokenPayload = {
-      type: "PASSPORT_TOKEN",
-      user: {
-        id: userData?.id || firebaseUser.uid,
-        authUserId: firebaseUser.uid,
-        email: userData?.email || email,
-        displayName: userData?.displayName || name,
-        photo: userData?.photo || image || "",
-        country: userData?.country || "unknown",
-        authProviders: userData?.authProviders || [],
-      },
-    };
-
-    const token = jwt.sign(tokenPayload, JWT_SECRET, {
-      expiresIn: JWT_EXPIRES_IN,
+    console.log("[OAuth Login] Calling backend /api/auth/login with:", {
+      email,
+      name,
+      provider,
     });
 
-    console.log("[OAuth Login] JWT token generated successfully for:", email);
+    // Call backend /api/auth/login (same as tinylittlefly does)
+    // Backend will generate the JWT token
+    const response = await fetch(`${BACKEND_API_URL}/auth/login`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        name,
+        image: image || "",
+        email,
+        provider,
+        sub: "", // Optional, can be added if needed
+      }),
+    });
 
-    // Step 4: Return response (same format as backend)
-    const response = {
-      token,
-      user: tokenPayload.user,
-    };
+    if (!response.ok) {
+      const errorText = await response.text();
+      console.error("[OAuth Login] Backend error:", {
+        status: response.status,
+        statusText: response.statusText,
+        body: errorText,
+      });
 
-    return NextResponse.json(response, { status: 200 });
+      return NextResponse.json(
+        {
+          error: "Backend authentication failed",
+          message: response.statusText,
+          details: errorText,
+        },
+        { status: response.status },
+      );
+    }
+
+    // Backend returns user object with JWT token
+    const userData = await response.json();
+
+    console.log("[OAuth Login] Backend returned user data:", {
+      hasToken: !!userData.token,
+      hasUser: !!userData.id,
+      email: userData.email,
+    });
+
+    // Return the same format as tinylittlefly expects
+    return NextResponse.json(
+      {
+        token: userData.token,
+        user: {
+          id: userData.id,
+          authUserId: userData.authUserId,
+          email: userData.email,
+          displayName: userData.displayName,
+          photo: userData.photo,
+          country: userData.country,
+          authProviders: userData.authProviders,
+        },
+      },
+      { status: 200 },
+    );
   } catch (error: any) {
     console.error("[OAuth Login] Error:", error);
     return NextResponse.json(
