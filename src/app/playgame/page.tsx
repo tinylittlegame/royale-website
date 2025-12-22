@@ -130,22 +130,17 @@ export default function PlayGame() {
 
       // On 401 Unauthorized, mark auth as failed and clear stale token
       if (error.response?.status === 401) {
-        console.log("[PlayGame] 401 Unauthorized - Clearing stale JWT and falling back to guest");
+        console.log("[PlayGame] 401 Unauthorized - Clearing stale JWT and showing choice screen");
         setAuthFailed(true);
         // Clear the stale JWT token from localStorage
         if (typeof window !== 'undefined') {
           localStorage.removeItem('jwt_token');
         }
-      }
-
-      // Strict v2 fallback: always try guest if any flow fails (as per documentation)
-      try {
-        console.log("[PlayGame] Any initialization failure results in Guest fallback (as per docs)");
-        const data = await guestUser();
-        setStateAndCookie(data);
-      } catch (fallbackError: any) {
-        console.error("[PlayGame] Fallback Error:", fallbackError);
-        setErrorMsg("Failed to initialize game session even after guest fallback. Please check your internet connection and refresh.");
+        // Show choice screen instead of auto-falling back to guest
+        setShowChoice(true);
+      } else {
+        // For other errors, show error message
+        setErrorMsg(`Failed to initialize game session: ${error.message}. Please try again.`);
       }
     } finally {
       initializingRef.current = false;
