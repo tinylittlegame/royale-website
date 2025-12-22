@@ -1,23 +1,7 @@
-import { NextRequest, NextResponse } from 'next/server';
-import { getDb, getAuth } from '@/lib/firebase-admin';
-import jwt from 'jsonwebtoken';
+import { NextRequest, NextResponse } from "next/server";
 
-// JWT configuration (same as backend)
-const JWT_SECRET = process.env.JWT_SECRET || process.env.NEXTAUTH_SECRET;
-
-if (process.env.NODE_ENV === 'development') {
-  console.log('[OAuth Login] Token Secret resolution:', {
-    hasJWTSecret: !!process.env.JWT_SECRET,
-    hasNextAuthSecret: !!process.env.NEXTAUTH_SECRET,
-    usingJWTSecret: !!process.env.JWT_SECRET,
-    secretLength: process.env.JWT_SECRET?.length || process.env.NEXTAUTH_SECRET?.length
-  });
-  if (!process.env.JWT_SECRET) {
-    console.warn('[OAuth Login] WARNING: JWT_SECRET is not set, falling back to NEXTAUTH_SECRET. This may cause 401 errors on the backend.');
-  }
-}
-
-const JWT_EXPIRES_IN = '30d'; // 30 days (same as backend: 2592000000ms)
+// Backend API URL
+const BACKEND_API_URL = process.env.NEXT_PUBLIC_API_URL;
 
 interface OAuthLoginRequest {
   email: string;
@@ -33,133 +17,71 @@ export async function POST(req: NextRequest) {
 
     if (!email || !name || !provider) {
       return NextResponse.json(
-        { error: 'Missing required fields: email, name, provider' },
-        { status: 400 }
+        { error: "Missing required fields: email, name, provider" },
+        { status: 400 },
       );
     }
 
-    // Check if JWT_SECRET is available
-    if (!JWT_SECRET) {
-      console.error('[OAuth Login] JWT_SECRET is not set!');
-      return NextResponse.json(
-        { error: 'Server configuration error: JWT_SECRET not set' },
-        { status: 500 }
-      );
-    }
-
-    // Get Firebase instances
-    let auth, db;
-    try {
-      auth = getAuth();
-      db = getDb();
-    } catch (firebaseError: any) {
-      console.error('[OAuth Login] Firebase initialization error:', firebaseError);
-      return NextResponse.json(
-        {
-          error: 'Firebase initialization failed',
-          message: firebaseError.message,
-          details: process.env.NODE_ENV === 'development' ? firebaseError.stack : undefined
-        },
-        { status: 500 }
-      );
-    }
-
-    // Step 1: Get or create Firebase Auth user
-    let firebaseUser;
-    try {
-      firebaseUser = await auth.getUserByEmail(email);
-    } catch (error) {
-      // User doesn't exist, create new Firebase Auth user
-      firebaseUser = await auth.createUser({
-        email,
-        displayName: name,
-        photoURL: image,
-      });
-    }
-
-    // Step 2: Get or create user document in Firestore
-    const usersRef = db.collection('users');
-    const userDoc = await usersRef.doc(firebaseUser.uid).get();
-
-    let userData: any;
-
-    if (userDoc.exists) {
-      // User exists, get data
-      userData = userDoc.data() || {};
-
-      // Update auth providers if needed
-      const authProviders = userData.authProviders || [];
-      const providerExists = authProviders.some((p: any) => p.providerId === provider);
-
-      if (!providerExists) {
-        authProviders.push({
-          providerId: provider,
-          uid: firebaseUser.uid,
-        });
-
-        await usersRef.doc(firebaseUser.uid).update({
-          authProviders,
-          updateAt: new Date(),
-        });
-      }
-    } else {
-      // Create new user document
-      userData = {
-        id: firebaseUser.uid,
-        authUserId: firebaseUser.uid,
-        email: email,
-        displayName: name,
-        photo: image || '',
-        country: 'unknown', // Will be set from IP later
-        authProviders: [
-          {
-            providerId: provider,
-            uid: firebaseUser.uid,
-          },
-        ],
-        registerAt: new Date(),
-        createAt: new Date(),
-        updateAt: new Date(),
-      };
-
-      await usersRef.doc(firebaseUser.uid).set(userData);
-    }
-
-    // Step 3: Generate JWT token (same format as backend)
-    const tokenPayload = {
-      type: 'PASSPORT_TOKEN',
-      user: {
-        id: userData?.id || firebaseUser.uid,
-        authUserId: firebaseUser.uid,
-        email: userData?.email || email,
-        displayName: userData?.displayName || name,
-        photo: userData?.photo || image || '',
-        country: userData?.country || 'unknown',
-        authProviders: userData?.authProviders || [],
-      },
-    };
-
-    const token = jwt.sign(tokenPayload, JWT_SECRET!, {
-      expiresIn: JWT_EXPIRES_IN,
+    console.log("[OAuth Login] Forwarding OAuth login to backend:", {
+      email,
+      name,
+      provider,
+      backendUrl: BACKEND_API_URL,
     });
 
-    // Step 4: Return response (same format as backend)
-    const response = {
-      token,
-      user: tokenPayload.user,
-    };
+    // Call backend API to handle OAuth login and JWT generation
+    const backendResponse = await fetch(`${BACKEND_API_URL}/auth/oauth/login`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        email,
+        displayName: name,
+        photo: image,
+        provider,
+      }),
+    });
 
-    return NextResponse.json(response, { status: 200 });
+    if (!backendResponse.ok) {
+      const errorData = await backendResponse.json().catch(() => ({}));
+      console.error("[OAuth Login] Backend returned error:", {
+        status: backendResponse.status,
+        statusText: backendResponse.statusText,
+        error: errorData,
+      });
 
+      return NextResponse.json(
+        {
+          error: "Backend OAuth login failed",
+          message: errorData.message || backendResponse.statusText,
+          details:
+            process.env.NODE_ENV === "development" ? errorData : undefined,
+        },
+        { status: backendResponse.status },
+      );
+    }
+
+    // Backend returns { token, user }
+    const data = await backendResponse.json();
+
+    console.log("[OAuth Login] Backend response received:", {
+      hasToken: !!data.token,
+      hasUser: !!data.user,
+      userId: data.user?.id,
+    });
+
+    return NextResponse.json(data, { status: 200 });
   } catch (error: any) {
-    console.error('[OAuth Login] Error:', error);
+    console.error("[OAuth Login] Error:", error);
     return NextResponse.json(
       {
-        error: 'OAuth login failed',
+        error: "OAuth login failed",
         message: error.message,
-        details: process.env.NODE_ENV === 'development' ? error.stack : undefined
+        details:
+          process.env.NODE_ENV === "development" ? error.stack : undefined,
       },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }
