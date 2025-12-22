@@ -36,7 +36,7 @@ export const authOptions: NextAuthOptions = {
                 };
             },
         }),
-        // Line provider configuration
+        // Line provider configuration - using standard OAuth flow
         {
             id: 'line',
             name: 'LINE',
@@ -47,34 +47,18 @@ export const authOptions: NextAuthOptions = {
                 url: 'https://access.line.me/oauth2/v2.1/authorize',
                 params: {
                     scope: 'profile openid email',
-                    response_type: 'code',
                 },
             },
             token: 'https://api.line.me/oauth2/v2.1/token',
             userinfo: 'https://api.line.me/v2/profile',
-            // Line returns email in the ID token, not in userinfo
-            idToken: true,
-            profile(profile: any, tokens: any) {
-                // Try to get email from ID token claims
-                let email = profile.email;
-
-                // If email not in profile, try to decode from ID token
-                if (!email && tokens.id_token) {
-                    try {
-                        const payload = JSON.parse(
-                            Buffer.from(tokens.id_token.split('.')[1], 'base64').toString()
-                        );
-                        email = payload.email;
-                    } catch (e) {
-                        console.log('[Line Auth] Could not decode email from ID token');
-                    }
-                }
-
+            profile(profile: any) {
+                console.log('[LINE Auth] Profile received:', JSON.stringify(profile, null, 2));
                 return {
-                    id: profile.userId || profile.sub,
-                    name: profile.displayName || profile.name,
-                    email: email || `${profile.userId || profile.sub}@line.me`,
-                    image: profile.pictureUrl || profile.picture,
+                    id: profile.userId,
+                    name: profile.displayName,
+                    // LINE returns email in ID token, not in userinfo - fallback handled in oauth-login route
+                    email: profile.email || `${profile.userId}@line.me`,
+                    image: profile.pictureUrl,
                 };
             },
         },
