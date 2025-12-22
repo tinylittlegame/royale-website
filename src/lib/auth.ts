@@ -36,29 +36,32 @@ export const authOptions: NextAuthOptions = {
                 };
             },
         }),
-        // Line provider configuration - using standard OAuth flow
+        // Line provider configuration - using OpenID Connect for email access
         {
             id: 'line',
             name: 'LINE',
             type: 'oauth',
             clientId: process.env.LINE_CLIENT_ID || '',
             clientSecret: process.env.LINE_CLIENT_SECRET || '',
+            wellKnown: 'https://access.line.me/.well-known/openid-configuration',
             authorization: {
-                url: 'https://access.line.me/oauth2/v2.1/authorize',
                 params: {
                     scope: 'profile openid email',
                 },
             },
-            token: 'https://api.line.me/oauth2/v2.1/token',
-            userinfo: 'https://api.line.me/v2/profile',
+            checks: ['state'],
+            idToken: true,
+            // LINE uses HS256 (HMAC with client secret) instead of RS256 (RSA) for ID tokens
+            client: {
+                id_token_signed_response_alg: 'HS256',
+            },
             profile(profile: any) {
                 console.log('[LINE Auth] Profile received:', JSON.stringify(profile, null, 2));
                 return {
-                    id: profile.userId,
-                    name: profile.displayName,
-                    // LINE returns email in ID token, not in userinfo - fallback handled in oauth-login route
-                    email: profile.email || `${profile.userId}@line.me`,
-                    image: profile.pictureUrl,
+                    id: profile.sub,
+                    name: profile.name,
+                    email: profile.email || `${profile.sub}@line.me`,
+                    image: profile.picture,
                 };
             },
         },

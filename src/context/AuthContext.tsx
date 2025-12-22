@@ -49,8 +49,9 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
                 return;
             }
 
-            if (session?.user && !token) {
+            if (session?.user) {
                 // OAuth login successful, exchange for backend JWT token via our Next.js API route
+                // Always refresh to get latest profile data (including updated profile images)
                 try {
                     // Call our Next.js API route (not the backend directly)
                     const response = await fetch('/api/auth/oauth-login', {
@@ -94,7 +95,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         };
 
         handleOAuthSession();
-    }, [session, sessionStatus, token]);
+    }, [session, sessionStatus]);
 
     // Check localStorage on mount
     useEffect(() => {
