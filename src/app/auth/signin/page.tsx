@@ -30,6 +30,7 @@ export default function SignIn() {
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
     const [error, setError] = useState('');
+    const [telegramScriptLoaded, setTelegramScriptLoaded] = useState(false);
 
     // Set error from URL params
     useEffect(() => {
@@ -77,6 +78,95 @@ export default function SignIn() {
     };
 
     const isProviderLoading = (provider: string) => loadingProvider === provider;
+
+    // Handle Telegram authentication callback
+    useEffect(() => {
+        // Define global callback for Telegram widget
+        (window as any).onTelegramAuth = async (user: any) => {
+            setLoading(true);
+            setLoadingProvider('telegram');
+            setError('');
+
+            try {
+                console.log('[Telegram Auth] Received user data from widget:', user);
+
+                // Call our backend API
+                const response = await fetch('/api/auth/telegram', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        id: user.id.toString(),
+                        first_name: user.first_name,
+                        last_name: user.last_name,
+                        username: user.username,
+                        photo_url: user.photo_url,
+                        auth_date: user.auth_date.toString(),
+                        hash: user.hash,
+                    }),
+                });
+
+                const data = await response.json();
+
+                if (data.success && data.token) {
+                    console.log('[Telegram Auth] Authentication successful');
+
+                    // Store user data in localStorage (use same keys as AuthContext)
+                    localStorage.setItem('jwt_token', data.token);
+                    localStorage.setItem('user_data', JSON.stringify(data.user));
+
+                    // Redirect to callback URL or home
+                    const callbackUrl = searchParams.get('callbackUrl') || '/';
+                    window.location.href = callbackUrl; // Force full page reload to trigger AuthContext update
+                } else {
+                    setError(data.message || 'Telegram authentication failed');
+                    setLoading(false);
+                    setLoadingProvider(null);
+                }
+            } catch (err: any) {
+                console.error('[Telegram Auth] Error:', err);
+                setError(err?.message || 'Failed to authenticate with Telegram');
+                setLoading(false);
+                setLoadingProvider(null);
+            }
+        };
+
+        // Cleanup
+        return () => {
+            delete (window as any).onTelegramAuth;
+        };
+    }, [router, searchParams]);
+
+    const handleTelegramLogin = () => {
+        setLoading(true);
+        setLoadingProvider('telegram');
+        setError('');
+
+        // Load Telegram widget script if not already loaded
+        if (!telegramScriptLoaded) {
+            const script = document.createElement('script');
+            script.src = 'https://telegram.org/js/telegram-widget.js?22';
+            script.async = true;
+            script.setAttribute('data-telegram-login', process.env.NEXT_PUBLIC_TELEGRAM_BOT_USERNAME || 'your_bot_username');
+            script.setAttribute('data-size', 'large');
+            script.setAttribute('data-onauth', 'onTelegramAuth(user)');
+            script.setAttribute('data-request-access', 'write');
+
+            script.onload = () => {
+                setTelegramScriptLoaded(true);
+                console.log('[Telegram] Widget script loaded');
+            };
+
+            script.onerror = () => {
+                setError('Failed to load Telegram widget');
+                setLoading(false);
+                setLoadingProvider(null);
+            };
+
+            document.body.appendChild(script);
+        }
+    };
 
     return (
         <div className="min-h-screen bg-black flex items-center justify-center p-4 relative overflow-hidden">
@@ -206,15 +296,22 @@ export default function SignIn() {
                         <span>Apple - Coming Soon</span>
                     </button>
 
-                    {/* Telegram - Coming Soon */}
+                    {/* Telegram */}
                     <button
-                        disabled
-                        className="w-full h-14 bg-white/5 text-white/40 font-bold rounded-xl flex items-center justify-center gap-3 border border-white/10 cursor-not-allowed"
+                        onClick={handleTelegramLogin}
+                        disabled={loading}
+                        className="w-full h-14 bg-[#0088cc] hover:bg-[#0077b5] text-white font-bold rounded-xl flex items-center justify-center gap-3 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                     >
-                        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                            <path d="M20.665 3.717L2.946 10.554C1.944 10.954 1.942 11.512 2.753 11.761L7.303 13.18L17.834 6.541C18.332 6.237 18.789 6.406 18.415 6.738L9.888 14.432V14.431L9.88 14.444L9.567 19.123C10.024 19.123 10.226 18.913 10.481 18.667L12.677 16.53L17.243 19.904C18.085 20.368 18.691 20.129 18.9 19.123L21.905 5.034C22.212 3.804 21.436 3.245 20.665 3.717Z" fill="currentColor" />
-                        </svg>
-                        <span>Telegram - Coming Soon</span>
+                        {isProviderLoading('telegram') ? (
+                            <Loader2 className="h-5 w-5 animate-spin" />
+                        ) : (
+                            <>
+                                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                    <path d="M20.665 3.717L2.946 10.554C1.944 10.954 1.942 11.512 2.753 11.761L7.303 13.18L17.834 6.541C18.332 6.237 18.789 6.406 18.415 6.738L9.888 14.432V14.431L9.88 14.444L9.567 19.123C10.024 19.123 10.226 18.913 10.481 18.667L12.677 16.53L17.243 19.904C18.085 20.368 18.691 20.129 18.9 19.123L21.905 5.034C22.212 3.804 21.436 3.245 20.665 3.717Z" fill="currentColor" />
+                                </svg>
+                                <span>Continue with Telegram</span>
+                            </>
+                        )}
                     </button>
                 </div>
 
