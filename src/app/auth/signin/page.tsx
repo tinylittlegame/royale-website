@@ -110,11 +110,15 @@ export default function SignIn() {
                 const data = await response.json();
 
                 if (data.success && data.token) {
-                    console.log('[Telegram Auth] Authentication successful');
+                    console.log('[Telegram Auth] Authentication successful, storing credentials');
+                    console.log('[Telegram Auth] User data:', data.user);
 
                     // Store user data in localStorage (use same keys as AuthContext)
                     localStorage.setItem('jwt_token', data.token);
                     localStorage.setItem('user_data', JSON.stringify(data.user));
+
+                    // Do NOT set nextauth_was_logged_in - this is a direct Telegram login
+                    console.log('[Telegram Auth] Redirecting to:', searchParams.get('callbackUrl') || '/');
 
                     // Redirect to callback URL or home
                     const callbackUrl = searchParams.get('callbackUrl') || '/';
@@ -376,8 +380,11 @@ export default function SignIn() {
                                             });
                                             const data = await response.json();
                                             if (data.success && data.token) {
+                                                console.log('[Test Telegram Auth] Login successful, storing credentials');
+                                                console.log('[Test Telegram Auth] User:', data.user);
                                                 localStorage.setItem('jwt_token', data.token);
                                                 localStorage.setItem('user_data', JSON.stringify(data.user));
+                                                // Do NOT set nextauth_was_logged_in
                                                 const callbackUrl = searchParams.get('callbackUrl') || '/';
                                                 window.location.href = callbackUrl;
                                             } else {
