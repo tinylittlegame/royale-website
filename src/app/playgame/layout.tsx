@@ -6,7 +6,7 @@ export default function PlayGameLayout({
     children: React.ReactNode;
 }) {
     return (
-        <div className="fixed inset-0 bg-black z-50">
+        <div className="fixed inset-0 w-full h-full bg-black overflow-hidden">
             {children}
         </div>
     );
