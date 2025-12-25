@@ -26,10 +26,12 @@ export default function PlayGame() {
   const [iframeLoading, setIframeLoading] = useState<boolean>(true); // Track iframe loading state
   const [showFullscreenPrompt, setShowFullscreenPrompt] = useState<boolean>(false); // Show fullscreen prompt on mobile
   const [isFullscreen, setIsFullscreen] = useState<boolean>(false); // Track fullscreen state
+  const [iframeError, setIframeError] = useState<boolean>(false); // Track iframe load errors
   const initializingRef = useRef<boolean>(false); // Prevent concurrent initializations
   const loadingTimeoutRef = useRef<NodeJS.Timeout | null>(null); // Timeout for loading screen
   const gameContainerRef = useRef<HTMLDivElement | null>(null); // Reference to game container
   const hasRedirectedRef = useRef<boolean>(false); // Prevent multiple redirects
+  const iframeTimeoutRef = useRef<NodeJS.Timeout | null>(null); // Timeout for iframe loading
 
   const setStateAndCookie = useCallback(({ token, userId, username }: InfoType) => {
     if (token && userId && username) {
@@ -199,16 +201,27 @@ export default function PlayGame() {
     if (token && userId) {
       // Show loading screen for at least 2 seconds so users know something is happening
       setIframeLoading(true);
+      setIframeError(false);
 
       loadingTimeoutRef.current = setTimeout(() => {
         console.log("[PlayGame] Minimum loading time elapsed");
         // Loading screen will be hidden when iframe loads
       }, 2000);
+
+      // Set a max timeout for iframe loading (30 seconds)
+      iframeTimeoutRef.current = setTimeout(() => {
+        console.error("[PlayGame] Iframe loading timeout - game did not load in 30 seconds");
+        setIframeError(true);
+        setIframeLoading(false);
+      }, 30000);
     }
 
     return () => {
       if (loadingTimeoutRef.current) {
         clearTimeout(loadingTimeoutRef.current);
+      }
+      if (iframeTimeoutRef.current) {
+        clearTimeout(iframeTimeoutRef.current);
       }
     };
   }, [token, userId]);
@@ -336,12 +349,21 @@ export default function PlayGame() {
   };
 
   const handleIframeLoad = () => {
+    console.log("[PlayGame] Game iframe onLoad event fired");
+
+    // Clear the timeout since iframe loaded successfully
+    if (iframeTimeoutRef.current) {
+      clearTimeout(iframeTimeoutRef.current);
+      iframeTimeoutRef.current = null;
+    }
+
     // Wait for minimum loading time before hiding loading screen
     const timeElapsed = loadingTimeoutRef.current ? 2000 : 0;
 
     setTimeout(() => {
-      console.log("[PlayGame] Game iframe loaded");
+      console.log("[PlayGame] Game iframe loaded successfully - hiding loading screen");
       setIframeLoading(false);
+      setIframeError(false);
 
       // On mobile, automatically try to enter fullscreen after loading
       if (isMobile() && !isFullscreen && !isIOS()) {
@@ -360,6 +382,15 @@ export default function PlayGame() {
     }, Math.max(0, timeElapsed));
   };
 
+  const handleIframeError = () => {
+    console.error("[PlayGame] Iframe failed to load");
+    setIframeError(true);
+    setIframeLoading(false);
+    if (iframeTimeoutRef.current) {
+      clearTimeout(iframeTimeoutRef.current);
+    }
+  };
+
   if (authLoading || status === "loading") {
     return <LoadingScreen message="Checking Authentication" />;
   }
@@ -370,9 +401,9 @@ export default function PlayGame() {
 
   if (errorMsg) {
     return (
-      <div className="w-full h-[calc(100vh-64px)] bg-black flex flex-col items-center justify-center text-white gap-4">
+      <div className="w-full h-screen bg-black flex flex-col items-center justify-center text-white gap-4 p-6">
         <p className="text-red-500 font-bold text-xl uppercase tracking-widest">Initialization Error</p>
-        <p className="text-gray-400">{errorMsg}</p>
+        <p className="text-gray-400 text-center max-w-md">{errorMsg}</p>
         <button
           onClick={() => window.location.reload()}
           className="px-6 py-3 bg-yellow-500 text-black rounded hover:bg-yellow-400 font-bold uppercase transition-all"
@@ -383,8 +414,63 @@ export default function PlayGame() {
     );
   }
 
+  if (iframeError) {
+    return (
+      <div className="w-full h-screen bg-black flex flex-col items-center justify-center text-white gap-6 p-6">
+        <svg
+          className="w-20 h-20 text-red-500"
+          fill="none"
+          stroke="currentColor"
+          viewBox="0 0 24 24"
+        >
+          <path
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            strokeWidth={2}
+            d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"
+          />
+        </svg>
+        <div className="text-center max-w-md">
+          <p className="text-red-500 font-bold text-2xl uppercase tracking-widest mb-3">Game Failed to Load</p>
+          <p className="text-gray-400 mb-2">The game could not be loaded. This might be due to:</p>
+          <ul className="text-gray-500 text-sm list-disc list-inside mb-4 space-y-1">
+            <li>Network connectivity issues</li>
+            <li>Game server is unavailable</li>
+            <li>Your browser blocking the game</li>
+          </ul>
+          <p className="text-gray-400 text-sm">
+            Game URL: <span className="text-yellow-500 font-mono text-xs break-all">{GAME_URL}</span>
+          </p>
+        </div>
+        <div className="flex gap-4">
+          <button
+            onClick={() => window.location.reload()}
+            className="px-6 py-3 bg-yellow-500 hover:bg-yellow-400 text-black rounded-xl font-bold uppercase transition-all"
+          >
+            Reload Page
+          </button>
+          <button
+            onClick={() => router.push('/')}
+            className="px-6 py-3 bg-zinc-800 hover:bg-zinc-700 text-white rounded-xl font-bold uppercase transition-all"
+          >
+            Go Home
+          </button>
+        </div>
+      </div>
+    );
+  }
+
   const branch = process.env.BRANCH === "develop" ? "&branch=develop" : "";
   const finalGameUrl = `${GAME_URL}?user=${userId}&login-token=${token}${branch}`;
+
+  console.log("[PlayGame] Rendering game with:", {
+    GAME_URL,
+    userId,
+    hasToken: !!token,
+    finalGameUrl,
+    iframeLoading,
+    iframeError
+  });
 
   return (
     <div
@@ -536,11 +622,26 @@ export default function PlayGame() {
         src={finalGameUrl}
         onLoad={handleIframeLoad}
         className="absolute inset-0 w-full h-full border-none"
-        style={{ border: 'none', margin: 0, padding: 0 }}
+        style={{
+          border: 'none',
+          margin: 0,
+          padding: 0,
+          display: iframeLoading ? 'none' : 'block' // Hide iframe while loading to prevent flash
+        }}
         allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; fullscreen"
         allowFullScreen
         title="Tiny Little Royale"
       />
+
+      {/* Debug info in development */}
+      {process.env.NODE_ENV === 'development' && (
+        <div className="absolute bottom-4 right-4 bg-black/80 text-white text-xs p-2 rounded font-mono max-w-sm">
+          <div>Game URL: {GAME_URL}</div>
+          <div>User ID: {userId?.substring(0, 8)}...</div>
+          <div>Token: {token ? '✓' : '✗'}</div>
+          <div>Loading: {iframeLoading ? 'Yes' : 'No'}</div>
+        </div>
+      )}
     </div>
   );
 }

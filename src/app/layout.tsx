@@ -8,7 +8,7 @@ const inter = Inter({ subsets: ["latin"] });
 
 export const metadata: Metadata = {
   title: "Tiny Little Royale",
-  description: "A fast-paced 2.5D multiplayer battle game with three modes: Deathmatch, Capture the Flag, and Team Fight.",
+  description: "Tiny little royale. โหมดตบฮุนเซนย - A fast-paced 2.5D multiplayer battle game. Fight players worldwide!",
   viewport: {
     width: "device-width",
     initialScale: 1,
@@ -20,6 +20,28 @@ export const metadata: Metadata = {
     capable: true,
     statusBarStyle: "black-translucent",
     title: "Tiny Little Royale",
+  },
+  openGraph: {
+    title: "Tiny Little Royale",
+    description: "Tiny little royale. โหมดตบฮุนเซนย 🎮",
+    url: "https://royaleapp.tinylittle.io",
+    siteName: "Tiny Little Royale",
+    images: [
+      {
+        url: "/images/2_icon_husen_512.png",
+        width: 512,
+        height: 512,
+        alt: "Tiny Little Royale - โหมดตบฮุนเซนย",
+      },
+    ],
+    locale: "th_TH",
+    type: "website",
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "Tiny Little Royale",
+    description: "Tiny little royale. โหมดตบฮุนเซนย 🎮",
+    images: ["/images/2_icon_husen_512.png"],
   },
 };
 

@@ -3,9 +3,35 @@
 import { motion } from 'framer-motion';
 import Link from 'next/link';
 import Image from 'next/image';
-import { ArrowRight, Apple, Play } from 'lucide-react'; // Generic Play icon
+import { ArrowRight, Apple, Play, Share2 } from 'lucide-react';
+import { useState } from 'react';
 
 export default function Home() {
+  const [shareSuccess, setShareSuccess] = useState(false);
+
+  const handleShare = async () => {
+    const shareData = {
+      title: 'Tiny Little Royale',
+      text: 'Tiny little royale. โหมดตบฮุนเซนย 🎮',
+      url: `${window.location.origin}/playgame`,
+    };
+
+    try {
+      // Try to use Web Share API (works on mobile)
+      if (navigator.share) {
+        await navigator.share(shareData);
+        console.log('[Share] Shared successfully via Web Share API');
+      } else {
+        // Fallback: Copy to clipboard
+        await navigator.clipboard.writeText(`${shareData.text}\n${shareData.url}`);
+        setShareSuccess(true);
+        setTimeout(() => setShareSuccess(false), 3000);
+        console.log('[Share] Link copied to clipboard');
+      }
+    } catch (err) {
+      console.error('[Share] Error sharing:', err);
+    }
+  };
   return (
     <div className="flex flex-col items-center justify-center relative overflow-hidden">
       {/* Hero Section */}
@@ -69,6 +95,43 @@ export default function Home() {
                 Google Play
               </Link>
             </div>
+
+            {/* Share Button */}
+            <motion.div
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.3 }}
+              className="relative"
+            >
+              <button
+                onClick={handleShare}
+                className="group px-8 py-4 bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-500 hover:to-pink-500 rounded-xl font-bold text-white transition-all flex items-center gap-3 shadow-lg shadow-purple-500/30 hover:shadow-purple-500/50 hover:scale-105 active:scale-95"
+              >
+                <div className="w-10 h-10 rounded-full bg-white/20 flex items-center justify-center">
+                  <Image
+                    src="/images/2_icon_husen_512.png"
+                    alt="Share Icon"
+                    width={24}
+                    height={24}
+                    className="rounded"
+                  />
+                </div>
+                <span>Share Game</span>
+                <Share2 size={18} className="group-hover:rotate-12 transition-transform" />
+              </button>
+
+              {/* Success tooltip */}
+              {shareSuccess && (
+                <motion.div
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0 }}
+                  className="absolute -bottom-12 left-1/2 transform -translate-x-1/2 bg-green-500 text-white text-sm px-4 py-2 rounded-lg whitespace-nowrap"
+                >
+                  ✓ Link copied to clipboard!
+                </motion.div>
+              )}
+            </motion.div>
           </div>
         </motion.div>
       </section>
