@@ -35,14 +35,23 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     // Handle NextAuth session changes (OAuth login)
     useEffect(() => {
         const handleOAuthSession = async () => {
+            // Check if NextAuth session expired but backend token still exists
+            // Only clear if this was originally a NextAuth login (Google/Facebook/LINE)
+            // Don't clear for email/password or Telegram logins
             if (sessionStatus === 'unauthenticated' && token) {
-                // NextAuth session gone but backend token still exists, clear it
-                setToken(null);
-                setUser(null);
-                localStorage.removeItem('jwt_token');
-                localStorage.removeItem('user_data');
-                setLoading(false);
-                return;
+                const wasNextAuthLogin = sessionStorage.getItem('nextauth_was_logged_in');
+
+                if (wasNextAuthLogin === 'true') {
+                    // NextAuth session gone but backend token still exists, clear it
+                    console.log('[Auth] NextAuth session expired, clearing stored credentials');
+                    setToken(null);
+                    setUser(null);
+                    localStorage.removeItem('jwt_token');
+                    localStorage.removeItem('user_data');
+                    sessionStorage.removeItem('nextauth_was_logged_in');
+                    setLoading(false);
+                    return;
+                }
             }
 
             if (sessionStatus === 'loading') {
@@ -51,6 +60,9 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
             }
 
             if (session?.user) {
+                // Mark that we're using NextAuth for session management
+                sessionStorage.setItem('nextauth_was_logged_in', 'true');
+                console.log('[Auth] NextAuth session detected, exchanging for backend JWT');
                 // OAuth login successful, exchange for backend JWT token via our Next.js API route
                 // Always refresh to get latest profile data (including updated profile images)
                 try {
@@ -172,6 +184,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         setToken(null);
         localStorage.removeItem('jwt_token');
         localStorage.removeItem('user_data');
+        sessionStorage.removeItem('nextauth_was_logged_in');
 
         // Sign out from NextAuth session
         await nextAuthSignOut({ redirect: false });
