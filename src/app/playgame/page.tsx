@@ -22,7 +22,9 @@ export default function PlayGame() {
   const [userId, setUserId] = useState<string | null>(null);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [authFailed, setAuthFailed] = useState<boolean>(false); // Track if auth already failed to prevent retry loops
+  const [iframeLoading, setIframeLoading] = useState<boolean>(true); // Track iframe loading state
   const initializingRef = useRef<boolean>(false); // Prevent concurrent initializations
+  const loadingTimeoutRef = useRef<NodeJS.Timeout | null>(null); // Timeout for loading screen
 
   const setStateAndCookie = useCallback(({ token, userId, username }: InfoType) => {
     if (token && userId && username) {
@@ -189,6 +191,25 @@ export default function PlayGame() {
     }
   }, [authLoading, status, jwtToken, token, initialize, authFailed, router]);
 
+  // Handle iframe loading with minimum display time
+  useEffect(() => {
+    if (token && userId) {
+      // Show loading screen for at least 2 seconds so users know something is happening
+      setIframeLoading(true);
+
+      loadingTimeoutRef.current = setTimeout(() => {
+        console.log("[PlayGame] Minimum loading time elapsed");
+        // Loading screen will be hidden when iframe loads
+      }, 2000);
+    }
+
+    return () => {
+      if (loadingTimeoutRef.current) {
+        clearTimeout(loadingTimeoutRef.current);
+      }
+    };
+  }, [token, userId]);
+
   // Handle messages from iframe
   useEffect(() => {
     const handleMessage = (event: MessageEvent) => {
@@ -237,12 +258,35 @@ export default function PlayGame() {
   const branch = process.env.BRANCH === "develop" ? "&branch=develop" : "";
   const finalGameUrl = `${GAME_URL}?user=${userId}&login-token=${token}${branch}`;
 
+  const handleIframeLoad = () => {
+    // Wait for minimum loading time before hiding loading screen
+    const timeElapsed = loadingTimeoutRef.current ? 2000 : 0;
+
+    setTimeout(() => {
+      console.log("[PlayGame] Game iframe loaded");
+      setIframeLoading(false);
+    }, Math.max(0, timeElapsed));
+  };
+
   return (
-    <div className="w-full h-screen bg-black relative">
+    <div className="fixed inset-0 w-full h-full bg-black overflow-hidden">
+      {/* Loading overlay */}
+      {iframeLoading && (
+        <div className="absolute inset-0 z-50 flex flex-col items-center justify-center bg-black gap-4">
+          <LoadingScreen message="Loading Game..." />
+          <p className="text-gray-500 text-sm text-center px-4">
+            For best experience, play in landscape mode
+          </p>
+        </div>
+      )}
+
+      {/* Game iframe - fullscreen */}
       <iframe
         src={finalGameUrl}
-        className="w-full h-full border-none"
-        allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+        onLoad={handleIframeLoad}
+        className="absolute inset-0 w-full h-full border-none"
+        style={{ border: 'none', margin: 0, padding: 0 }}
+        allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; fullscreen"
         allowFullScreen
         title="Tiny Little Royale"
       />
