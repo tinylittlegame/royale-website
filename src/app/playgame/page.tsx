@@ -198,17 +198,11 @@ export default function PlayGame() {
     }
   }, [authLoading, status, jwtToken, token, initialize, authFailed, router]);
 
-  // Handle iframe loading with minimum display time
+  // Handle iframe loading
   useEffect(() => {
     if (token && userId) {
-      // Show loading screen for at least 2 seconds so users know something is happening
       setIframeLoading(true);
       setIframeError(false);
-
-      loadingTimeoutRef.current = setTimeout(() => {
-        console.log("[PlayGame] Minimum loading time elapsed");
-        // Loading screen will be hidden when iframe loads
-      }, 2000);
 
       // Set a max timeout for iframe loading (30 seconds)
       iframeTimeoutRef.current = setTimeout(() => {
@@ -219,9 +213,6 @@ export default function PlayGame() {
     }
 
     return () => {
-      if (loadingTimeoutRef.current) {
-        clearTimeout(loadingTimeoutRef.current);
-      }
       if (iframeTimeoutRef.current) {
         clearTimeout(iframeTimeoutRef.current);
       }
@@ -439,29 +430,25 @@ export default function PlayGame() {
       iframeTimeoutRef.current = null;
     }
 
-    // Wait for minimum loading time before hiding loading screen
-    const timeElapsed = loadingTimeoutRef.current ? 2000 : 0;
+    // Immediately hide loading screen and show game
+    console.log("[PlayGame] Game iframe loaded successfully - showing game");
+    setIframeLoading(false);
+    setIframeError(false);
 
-    setTimeout(() => {
-      console.log("[PlayGame] Game iframe loaded successfully - hiding loading screen");
-      setIframeLoading(false);
-      setIframeError(false);
+    // On mobile, automatically try to enter fullscreen after loading
+    if (isMobile() && !isFullscreen && !isIOS()) {
+      // Small delay to ensure smooth transition (skip on iOS as it won't work)
+      setTimeout(() => {
+        enterFullscreen();
+      }, 300);
+    }
 
-      // On mobile, automatically try to enter fullscreen after loading
-      if (isMobile() && !isFullscreen && !isIOS()) {
-        // Small delay to ensure smooth transition (skip on iOS as it won't work)
-        setTimeout(() => {
-          enterFullscreen();
-        }, 500);
-      }
-
-      // On iOS, try to hide the address bar by scrolling
-      if (isIOS()) {
-        setTimeout(() => {
-          window.scrollTo(0, 1);
-        }, 100);
-      }
-    }, Math.max(0, timeElapsed));
+    // On iOS, try to hide the address bar by scrolling
+    if (isIOS()) {
+      setTimeout(() => {
+        window.scrollTo(0, 1);
+      }, 100);
+    }
   };
 
   const handleIframeError = () => {
@@ -543,7 +530,10 @@ export default function PlayGame() {
   }
 
   const branch = process.env.BRANCH === "develop" ? "&branch=develop" : "";
-  const finalGameUrl = `${GAME_URL}?user=${userId}&login-token=${token}${branch}`;
+  // Pass viewport dimensions to game so it can scale properly
+  const viewportWidth = typeof window !== 'undefined' ? window.innerWidth : 0;
+  const viewportHeight = typeof window !== 'undefined' ? window.innerHeight : 0;
+  const finalGameUrl = `${GAME_URL}?user=${userId}&login-token=${token}${branch}&vw=${viewportWidth}&vh=${viewportHeight}`;
 
   console.log("[PlayGame] Rendering game with:", {
     GAME_URL,
@@ -823,12 +813,15 @@ export default function PlayGame() {
         className="absolute inset-0 w-full h-full border-none"
         style={{
           border: 'none',
+          outline: 'none',
           margin: 0,
           padding: 0,
           display: (iframeLoading || isPortrait) ? 'none' : 'block', // Hide iframe while loading or in portrait mode
           width: '100%',
           height: '100%',
+          minWidth: '100%',
           minHeight: '100%',
+          maxWidth: '100%',
           maxHeight: '100%',
           overflow: 'hidden',
           position: 'absolute',
@@ -836,9 +829,11 @@ export default function PlayGame() {
           left: 0,
           right: 0,
           bottom: 0,
+          objectFit: 'fill' as any, // Try to fill the entire space
         }}
         allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; fullscreen"
         allowFullScreen
+        scrolling="no"
         title="Tiny Little Royale"
       />
 
