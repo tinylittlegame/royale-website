@@ -1,14 +1,11 @@
 'use client';
 
 import { usePathname } from 'next/navigation';
+import { Suspense } from 'react';
 import Navbar from './Navbar';
 import Footer from './Footer';
 
-export default function ConditionalLayout({
-    children,
-}: {
-    children: React.ReactNode;
-}) {
+function LayoutContent({ children }: { children: React.ReactNode }) {
     const pathname = usePathname();
     const isGamePage = pathname === '/playgame';
 
@@ -26,5 +23,23 @@ export default function ConditionalLayout({
             </main>
             <Footer />
         </div>
+    );
+}
+
+export default function ConditionalLayout({
+    children,
+}: {
+    children: React.ReactNode;
+}) {
+    return (
+        <Suspense fallback={
+            <div className="flex flex-col min-h-screen">
+                <main className="flex-grow">
+                    {children}
+                </main>
+            </div>
+        }>
+            <LayoutContent>{children}</LayoutContent>
+        </Suspense>
     );
 }
