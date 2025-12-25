@@ -21,7 +21,6 @@ export default function PlayGame() {
   const [token, setToken] = useState<string | null>(null);
   const [userId, setUserId] = useState<string | null>(null);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
-  const [showChoice, setShowChoice] = useState<boolean>(false);
   const [authFailed, setAuthFailed] = useState<boolean>(false); // Track if auth already failed to prevent retry loops
   const initializingRef = useRef<boolean>(false); // Prevent concurrent initializations
 
@@ -33,7 +32,6 @@ export default function PlayGame() {
 
       setToken(token);
       setUserId(userId);
-      setShowChoice(false);
     }
   }, []);
 
@@ -84,12 +82,11 @@ export default function PlayGame() {
     }
     initializingRef.current = true;
 
-    console.log("[PlayGame] Initializing v2 with:", {
+    console.log("[PlayGame] Initializing with:", {
       GAME_ID,
       hasJwtToken: !!jwtToken,
       jwtTokenPrefix: jwtToken ? jwtToken.substring(0, 10) + "..." : "none",
       status,
-      showChoice,
       authFailed,
       hasLocalUserId: !!getCookie("userId")
     });
@@ -101,15 +98,7 @@ export default function PlayGame() {
         const data = await authenUser();
         setStateAndCookie(data);
       } else {
-        // Only auto-initialize if we aren't explicitly showing choice
-        // If unauthenticated and no choice made yet, show choice
-        if (!showChoice && !token) {
-          console.log("[PlayGame] Unauthenticated - Showing Choice View");
-          setShowChoice(true);
-          initializingRef.current = false;
-          return;
-        }
-
+        // Guest flow - create or update guest user
         if (getCookie("userId")) {
           console.log("[PlayGame] Attempting Guest Update Flow (UserId exists)");
           const data = await updateToken();
@@ -128,16 +117,23 @@ export default function PlayGame() {
         configUrl: error.config?.url
       });
 
-      // On 401 Unauthorized, mark auth as failed and clear stale token
+      // On 401 Unauthorized, mark auth as failed and fall back to guest
       if (error.response?.status === 401) {
-        console.log("[PlayGame] 401 Unauthorized - Clearing stale JWT and showing choice screen");
+        console.log("[PlayGame] 401 Unauthorized - Clearing stale JWT and creating guest account");
         setAuthFailed(true);
         // Clear the stale JWT token from localStorage
         if (typeof window !== 'undefined') {
           localStorage.removeItem('jwt_token');
+          localStorage.removeItem('user_data');
         }
-        // Show choice screen instead of auto-falling back to guest
-        setShowChoice(true);
+        // Try to create guest account
+        try {
+          const guestData = await guestUser();
+          setStateAndCookie(guestData);
+        } catch (guestError: any) {
+          console.error("[PlayGame] Failed to create guest account:", guestError);
+          setErrorMsg(`Failed to initialize game session. Please try again.`);
+        }
       } else {
         // For other errors, show error message
         setErrorMsg(`Failed to initialize game session: ${error.message}. Please try again.`);
@@ -145,7 +141,7 @@ export default function PlayGame() {
     } finally {
       initializingRef.current = false;
     }
-  }, [jwtToken, status, setStateAndCookie, showChoice, token, authFailed]);
+  }, [jwtToken, status, setStateAndCookie, token, authFailed]);
 
   const hasRedirectedRef = useRef<boolean>(false); // Prevent multiple redirects
 
@@ -186,11 +182,10 @@ export default function PlayGame() {
       return;
     }
 
-    // Only redirect if truly unauthenticated (no session, no token)
+    // If unauthenticated, just initialize (will create guest account)
     if (status === "unauthenticated" && !jwtToken && !authFailed) {
-      console.log("[PlayGame] Confirmed unauthenticated - Redirecting to login page");
-      hasRedirectedRef.current = true;
-      router.push("/auth/signin?callbackUrl=/playgame");
+      console.log("[PlayGame] Unauthenticated - Initializing guest account");
+      initialize();
     }
   }, [authLoading, status, jwtToken, token, initialize, authFailed, router]);
 
@@ -220,51 +215,8 @@ export default function PlayGame() {
     return <LoadingScreen message="Checking Authentication" />;
   }
 
-  if (showChoice) {
-    return (
-      <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/90 backdrop-blur-md">
-        <div className="max-w-md w-full mx-4 p-8 bg-zinc-900 border border-yellow-500/30 rounded-2xl shadow-2xl shadow-yellow-500/10 text-center">
-          <h2 className="text-3xl font-black text-white mb-2 uppercase tracking-tighter">Ready for Battle?</h2>
-          <p className="text-gray-400 mb-8">Choose how you want to enter the Royale</p>
-
-          <div className="flex flex-col gap-4">
-            <button
-              onClick={() => router.push("/auth/signin?callbackUrl=/playgame")}
-              className="group relative px-8 py-4 bg-yellow-500 hover:bg-yellow-400 text-black font-bold rounded-xl transition-all transform hover:scale-[1.02] active:scale-[0.98]"
-            >
-              <div className="relative z-10 flex items-center justify-center gap-2">
-                <span className="uppercase tracking-widest">Login to Account</span>
-              </div>
-              <div className="absolute inset-0 bg-white/20 opacity-0 group-hover:opacity-100 transition-opacity rounded-xl"></div>
-            </button>
-
-            <div className="flex items-center gap-4 my-2">
-              <div className="h-px flex-1 bg-zinc-800"></div>
-              <span className="text-zinc-600 uppercase text-xs font-bold">OR</span>
-              <div className="h-px flex-1 bg-zinc-800"></div>
-            </div>
-
-            <button
-              onClick={() => {
-                setShowChoice(false);
-                initialize();
-              }}
-              className="px-8 py-4 bg-zinc-800 hover:bg-zinc-700 text-white font-bold rounded-xl border border-zinc-700 transition-all transform hover:scale-[1.02] active:scale-[0.98]"
-            >
-              <span className="uppercase tracking-widest opacity-80 group-hover:opacity-100">Play as Guest</span>
-            </button>
-          </div>
-
-          <p className="mt-8 text-zinc-500 text-xs uppercase tracking-widest leading-relaxed">
-            Guest sessions do not save progress<br />or leaderboard statistics
-          </p>
-        </div>
-      </div>
-    );
-  }
-
   if (!token) {
-    return <LoadingScreen message="Initializing Royale Session" />;
+    return <LoadingScreen message="Initializing Game Session" />;
   }
 
   if (errorMsg) {

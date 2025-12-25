@@ -205,42 +205,44 @@ export default function SignIn() {
                 )}
 
                 <div className="space-y-4">
-                    {/* Email/Password Form */}
-                    <form onSubmit={handleCredentialsLogin} className="space-y-4 mb-6 border-b border-white/10 pb-6">
-                        <div>
-                            <input
-                                type="email"
-                                placeholder="Email"
-                                value={email}
-                                onChange={(e) => setEmail(e.target.value)}
-                                className="w-full bg-black/50 border border-white/10 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-yellow-500 transition-colors"
-                                required
-                                disabled={loading}
-                            />
-                        </div>
-                        <div>
-                            <input
-                                type="password"
-                                placeholder="Password"
-                                value={password}
-                                onChange={(e) => setPassword(e.target.value)}
-                                className="w-full bg-black/50 border border-white/10 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-yellow-500 transition-colors"
-                                required
-                                disabled={loading}
-                            />
-                        </div>
-                        <button
-                            type="submit"
-                            disabled={loading || authLoading}
-                            className="w-full h-12 bg-yellow-500 hover:bg-yellow-400 text-black font-bold rounded-xl flex items-center justify-center gap-3 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                        >
-                            {isProviderLoading('email') ? (
-                                <Loader2 className="h-5 w-5 animate-spin" />
-                            ) : (
-                                <span>Login with Email</span>
-                            )}
-                        </button>
-                    </form>
+                    {/* Email/Password Form - HIDDEN FOR NOW */}
+                    {false && (
+                        <form onSubmit={handleCredentialsLogin} className="space-y-4 mb-6 border-b border-white/10 pb-6">
+                            <div>
+                                <input
+                                    type="email"
+                                    placeholder="Email"
+                                    value={email}
+                                    onChange={(e) => setEmail(e.target.value)}
+                                    className="w-full bg-black/50 border border-white/10 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-yellow-500 transition-colors"
+                                    required
+                                    disabled={loading}
+                                />
+                            </div>
+                            <div>
+                                <input
+                                    type="password"
+                                    placeholder="Password"
+                                    value={password}
+                                    onChange={(e) => setPassword(e.target.value)}
+                                    className="w-full bg-black/50 border border-white/10 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-yellow-500 transition-colors"
+                                    required
+                                    disabled={loading}
+                                />
+                            </div>
+                            <button
+                                type="submit"
+                                disabled={loading || authLoading}
+                                className="w-full h-12 bg-yellow-500 hover:bg-yellow-400 text-black font-bold rounded-xl flex items-center justify-center gap-3 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                            >
+                                {isProviderLoading('email') ? (
+                                    <Loader2 className="h-5 w-5 animate-spin" />
+                                ) : (
+                                    <span>Login with Email</span>
+                                )}
+                            </button>
+                        </form>
+                    )}
 
                     {/* Google */}
                     <button
@@ -258,21 +260,23 @@ export default function SignIn() {
                         )}
                     </button>
 
-                    {/* Facebook */}
-                    <button
-                        onClick={() => handleOAuthLogin('facebook')}
-                        disabled={loading}
-                        className="w-full h-14 bg-[#1877F2] hover:bg-[#166fe5] text-white font-bold rounded-xl flex items-center justify-center gap-3 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                    >
-                        {isProviderLoading('facebook') ? (
-                            <Loader2 className="h-5 w-5 animate-spin" />
-                        ) : (
-                            <>
-                                <Image src="https://authjs.dev/img/providers/facebook.svg" width={24} height={24} alt="Facebook" />
-                                <span>Continue with Facebook</span>
-                            </>
-                        )}
-                    </button>
+                    {/* Facebook - HIDDEN FOR NOW */}
+                    {false && (
+                        <button
+                            onClick={() => handleOAuthLogin('facebook')}
+                            disabled={loading}
+                            className="w-full h-14 bg-[#1877F2] hover:bg-[#166fe5] text-white font-bold rounded-xl flex items-center justify-center gap-3 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                        >
+                            {isProviderLoading('facebook') ? (
+                                <Loader2 className="h-5 w-5 animate-spin" />
+                            ) : (
+                                <>
+                                    <Image src="https://authjs.dev/img/providers/facebook.svg" width={24} height={24} alt="Facebook" />
+                                    <span>Continue with Facebook</span>
+                                </>
+                            )}
+                        </button>
+                    )}
 
                     {/* Line */}
                     <button
@@ -290,14 +294,16 @@ export default function SignIn() {
                         )}
                     </button>
 
-                    {/* Apple - Coming Soon */}
-                    <button
-                        disabled
-                        className="w-full h-14 bg-white/5 text-white/40 font-bold rounded-xl flex items-center justify-center gap-3 border border-white/10 cursor-not-allowed"
-                    >
-                        <Apple size={24} />
-                        <span>Apple - Coming Soon</span>
-                    </button>
+                    {/* Apple - HIDDEN FOR NOW */}
+                    {false && (
+                        <button
+                            disabled
+                            className="w-full h-14 bg-white/5 text-white/40 font-bold rounded-xl flex items-center justify-center gap-3 border border-white/10 cursor-not-allowed"
+                        >
+                            <Apple size={24} />
+                            <span>Apple - Coming Soon</span>
+                        </button>
+                    )}
 
                     {/* Telegram */}
                     <button
