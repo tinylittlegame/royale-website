@@ -29,6 +29,7 @@ export default function PlayGame() {
   const initializingRef = useRef<boolean>(false); // Prevent concurrent initializations
   const loadingTimeoutRef = useRef<NodeJS.Timeout | null>(null); // Timeout for loading screen
   const gameContainerRef = useRef<HTMLDivElement | null>(null); // Reference to game container
+  const hasRedirectedRef = useRef<boolean>(false); // Prevent multiple redirects
 
   const setStateAndCookie = useCallback(({ token, userId, username }: InfoType) => {
     if (token && userId && username) {
@@ -149,8 +150,6 @@ export default function PlayGame() {
     }
   }, [jwtToken, status, setStateAndCookie, token, authFailed]);
 
-  const hasRedirectedRef = useRef<boolean>(false); // Prevent multiple redirects
-
   useEffect(() => {
     // Don't re-initialize if we already have a token
     if (token) {
@@ -236,31 +235,35 @@ export default function PlayGame() {
     return () => window.removeEventListener("message", handleMessage);
   }, [router]);
 
-  if (authLoading || status === "loading") {
-    return <LoadingScreen message="Checking Authentication" />;
-  }
+  // Handle fullscreen change events
+  useEffect(() => {
+    const handleFullscreenChange = () => {
+      const isCurrentlyFullscreen = !!(
+        document.fullscreenElement ||
+        (document as any).webkitFullscreenElement ||
+        (document as any).mozFullScreenElement ||
+        (document as any).msFullscreenElement
+      );
+      setIsFullscreen(isCurrentlyFullscreen);
 
-  if (!token) {
-    return <LoadingScreen message="Initializing Game Session" />;
-  }
+      if (!isCurrentlyFullscreen && isMobile()) {
+        // User exited fullscreen on mobile, show prompt again
+        setShowFullscreenPrompt(true);
+      }
+    };
 
-  if (errorMsg) {
-    return (
-      <div className="w-full h-[calc(100vh-64px)] bg-black flex flex-col items-center justify-center text-white gap-4">
-        <p className="text-red-500 font-bold text-xl uppercase tracking-widest">Initialization Error</p>
-        <p className="text-gray-400">{errorMsg}</p>
-        <button
-          onClick={() => window.location.reload()}
-          className="px-6 py-3 bg-yellow-500 text-black rounded hover:bg-yellow-400 font-bold uppercase transition-all"
-        >
-          Try Again
-        </button>
-      </div>
-    );
-  }
+    document.addEventListener('fullscreenchange', handleFullscreenChange);
+    document.addEventListener('webkitfullscreenchange', handleFullscreenChange);
+    document.addEventListener('mozfullscreenchange', handleFullscreenChange);
+    document.addEventListener('MSFullscreenChange', handleFullscreenChange);
 
-  const branch = process.env.BRANCH === "develop" ? "&branch=develop" : "";
-  const finalGameUrl = `${GAME_URL}?user=${userId}&login-token=${token}${branch}`;
+    return () => {
+      document.removeEventListener('fullscreenchange', handleFullscreenChange);
+      document.removeEventListener('webkitfullscreenchange', handleFullscreenChange);
+      document.removeEventListener('mozfullscreenchange', handleFullscreenChange);
+      document.removeEventListener('MSFullscreenChange', handleFullscreenChange);
+    };
+  }, []);
 
   // Detect if user is on mobile
   const isMobile = () => {
@@ -357,35 +360,31 @@ export default function PlayGame() {
     }, Math.max(0, timeElapsed));
   };
 
-  // Handle fullscreen change events
-  useEffect(() => {
-    const handleFullscreenChange = () => {
-      const isCurrentlyFullscreen = !!(
-        document.fullscreenElement ||
-        (document as any).webkitFullscreenElement ||
-        (document as any).mozFullScreenElement ||
-        (document as any).msFullscreenElement
-      );
-      setIsFullscreen(isCurrentlyFullscreen);
+  if (authLoading || status === "loading") {
+    return <LoadingScreen message="Checking Authentication" />;
+  }
 
-      if (!isCurrentlyFullscreen && isMobile()) {
-        // User exited fullscreen on mobile, show prompt again
-        setShowFullscreenPrompt(true);
-      }
-    };
+  if (!token) {
+    return <LoadingScreen message="Initializing Game Session" />;
+  }
 
-    document.addEventListener('fullscreenchange', handleFullscreenChange);
-    document.addEventListener('webkitfullscreenchange', handleFullscreenChange);
-    document.addEventListener('mozfullscreenchange', handleFullscreenChange);
-    document.addEventListener('MSFullscreenChange', handleFullscreenChange);
+  if (errorMsg) {
+    return (
+      <div className="w-full h-[calc(100vh-64px)] bg-black flex flex-col items-center justify-center text-white gap-4">
+        <p className="text-red-500 font-bold text-xl uppercase tracking-widest">Initialization Error</p>
+        <p className="text-gray-400">{errorMsg}</p>
+        <button
+          onClick={() => window.location.reload()}
+          className="px-6 py-3 bg-yellow-500 text-black rounded hover:bg-yellow-400 font-bold uppercase transition-all"
+        >
+          Try Again
+        </button>
+      </div>
+    );
+  }
 
-    return () => {
-      document.removeEventListener('fullscreenchange', handleFullscreenChange);
-      document.removeEventListener('webkitfullscreenchange', handleFullscreenChange);
-      document.removeEventListener('mozfullscreenchange', handleFullscreenChange);
-      document.removeEventListener('MSFullscreenChange', handleFullscreenChange);
-    };
-  }, []);
+  const branch = process.env.BRANCH === "develop" ? "&branch=develop" : "";
+  const finalGameUrl = `${GAME_URL}?user=${userId}&login-token=${token}${branch}`;
 
   return (
     <div
