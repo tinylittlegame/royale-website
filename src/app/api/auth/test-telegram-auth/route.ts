@@ -128,6 +128,7 @@ export async function POST(req: NextRequest) {
           id: userData.id,
           authUserId: userData.authUserId,
           email: userData.email,
+          name: userData.displayName, // Use 'name' to match AuthContext interface
           displayName: userData.displayName,
           photo: userData.photo,
           country: userData.country,
