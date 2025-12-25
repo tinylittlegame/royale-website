@@ -28,6 +28,7 @@ export default function PlayGame() {
   const [isFullscreen, setIsFullscreen] = useState<boolean>(false); // Track fullscreen state
   const [iframeError, setIframeError] = useState<boolean>(false); // Track iframe load errors
   const [showInAppBrowserWarning, setShowInAppBrowserWarning] = useState<boolean>(false); // Show warning for in-app browsers
+  const [isPortrait, setIsPortrait] = useState<boolean>(false); // Track if device is in portrait orientation
   const initializingRef = useRef<boolean>(false); // Prevent concurrent initializations
   const loadingTimeoutRef = useRef<NodeJS.Timeout | null>(null); // Timeout for loading screen
   const gameContainerRef = useRef<HTMLDivElement | null>(null); // Reference to game container
@@ -290,6 +291,36 @@ export default function PlayGame() {
     }
   }, []);
 
+  // Detect and track device orientation
+  useEffect(() => {
+    const checkOrientation = () => {
+      // Check if device is in portrait mode
+      const portrait = window.innerHeight > window.innerWidth;
+      console.log('[PlayGame] Orientation check:', {
+        width: window.innerWidth,
+        height: window.innerHeight,
+        isPortrait: portrait
+      });
+      setIsPortrait(portrait);
+    };
+
+    // Check on mount
+    checkOrientation();
+
+    // Listen for orientation and resize changes
+    window.addEventListener('orientationchange', checkOrientation);
+    window.addEventListener('resize', checkOrientation);
+
+    // Also check after a short delay to catch delayed browser UI changes
+    const timeoutId = setTimeout(checkOrientation, 100);
+
+    return () => {
+      window.removeEventListener('orientationchange', checkOrientation);
+      window.removeEventListener('resize', checkOrientation);
+      clearTimeout(timeoutId);
+    };
+  }, []);
+
   // Detect if user is on mobile
   const isMobile = () => {
     if (typeof window === 'undefined') return false;
@@ -543,8 +574,68 @@ export default function PlayGame() {
         overscrollBehavior: 'none', // Prevent overscroll effects
       } as React.CSSProperties}
     >
+      {/* Portrait mode overlay - force landscape orientation */}
+      {isPortrait && (
+        <div className="absolute inset-0 z-50 flex flex-col items-center justify-center bg-gradient-to-br from-black via-gray-900 to-black p-8">
+          <motion.div
+            initial={{ opacity: 0, rotate: 0 }}
+            animate={{ opacity: 1, rotate: [0, -90, -90, -90] }}
+            transition={{ duration: 1, times: [0, 0.3, 0.7, 1] }}
+            className="mb-8"
+          >
+            <svg
+              className="w-24 h-24 text-yellow-500"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={1.5}
+                d="M12 18h.01M8 21h8a2 2 0 002-2V5a2 2 0 00-2-2H8a2 2 0 00-2 2v14a2 2 0 002 2z"
+              />
+            </svg>
+          </motion.div>
+
+          <div className="text-center max-w-sm">
+            <h2 className="text-3xl font-bold text-white mb-4 uppercase tracking-wider">
+              Rotate Your Device
+            </h2>
+            <p className="text-gray-400 text-lg mb-6">
+              Please rotate your device to landscape mode for the best gaming experience
+            </p>
+
+            {/* Rotation icon animation */}
+            <motion.div
+              animate={{ rotate: 360 }}
+              transition={{ duration: 2, repeat: Infinity, ease: "linear" }}
+              className="inline-block"
+            >
+              <svg
+                className="w-16 h-16 text-yellow-500"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"
+                />
+              </svg>
+            </motion.div>
+          </div>
+
+          <div className="mt-8 text-gray-500 text-sm">
+            Landscape mode required • Width × Height
+          </div>
+        </div>
+      )}
+
       {/* In-app browser warning - compact banner at top */}
-      {showInAppBrowserWarning && !iframeLoading && (
+      {showInAppBrowserWarning && !iframeLoading && !isPortrait && (
         <div className="absolute top-0 left-0 right-0 z-40 bg-gradient-to-r from-orange-600 to-orange-700 shadow-lg">
           <div className="flex items-center gap-2 px-3 py-2">
             <svg
@@ -591,7 +682,7 @@ export default function PlayGame() {
       )}
 
       {/* Loading overlay */}
-      {iframeLoading && (
+      {iframeLoading && !isPortrait && (
         <div
           className="absolute inset-0 z-50 flex flex-col items-center justify-center bg-black gap-4 cursor-pointer"
           onClick={() => {
@@ -620,7 +711,7 @@ export default function PlayGame() {
       )}
 
       {/* Fullscreen prompt for mobile - only shows if auto-fullscreen failed */}
-      {showFullscreenPrompt && !iframeLoading && (
+      {showFullscreenPrompt && !iframeLoading && !isPortrait && (
         <div className="absolute inset-0 z-50 flex flex-col items-center justify-center bg-black/95 backdrop-blur-sm p-6">
           <motion.div
             initial={{ opacity: 0, scale: 0.9 }}
@@ -734,7 +825,7 @@ export default function PlayGame() {
           border: 'none',
           margin: 0,
           padding: 0,
-          display: iframeLoading ? 'none' : 'block', // Hide iframe while loading to prevent flash
+          display: (iframeLoading || isPortrait) ? 'none' : 'block', // Hide iframe while loading or in portrait mode
           width: '100%',
           height: '100%',
           minHeight: '100%',
