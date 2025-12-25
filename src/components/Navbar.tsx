@@ -52,7 +52,7 @@ const Navbar = () => {
                             {user ? (
                                 <div className="flex items-center gap-4">
                                     <span className="text-gray-300 text-sm">
-                                        {user.name || user.email}
+                                        {user.name || (user as any).displayName || user.email}
                                     </span>
                                     {user.photo ? (
                                         <Image
@@ -70,7 +70,7 @@ const Navbar = () => {
                                         />
                                     ) : null}
                                     <div className={`w-8 h-8 rounded-full ring-2 ring-yellow-500 bg-yellow-500 flex items-center justify-center text-black font-bold text-sm ${user.photo ? 'hidden' : ''}`}>
-                                        {(user.name || user.email || '?').charAt(0).toUpperCase()}
+                                        {(user.name || (user as any).displayName || user.email || '?').charAt(0).toUpperCase()}
                                     </div>
                                     <button
                                         onClick={() => logout()}
@@ -141,11 +141,11 @@ const Navbar = () => {
                                             />
                                         ) : null}
                                         <div className={`w-10 h-10 rounded-full bg-yellow-500 flex items-center justify-center text-black font-bold text-lg ${user.photo ? 'hidden' : ''}`}>
-                                            {(user.name || user.email || '?').charAt(0).toUpperCase()}
+                                            {(user.name || (user as any).displayName || user.email || '?').charAt(0).toUpperCase()}
                                         </div>
                                     </div>
                                     <div className="ml-3">
-                                        <div className="text-base font-medium leading-none text-white">{user.name}</div>
+                                        <div className="text-base font-medium leading-none text-white">{user.name || (user as any).displayName}</div>
                                         <div className="text-sm font-medium leading-none text-gray-400">{user.email}</div>
                                     </div>
                                 </div>

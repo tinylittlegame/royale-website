@@ -30,6 +30,7 @@ export default function SignIn() {
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
     const [error, setError] = useState('');
+    const [showTelegramWidget, setShowTelegramWidget] = useState(false);
 
     // Set error from URL params
     useEffect(() => {
@@ -77,6 +78,94 @@ export default function SignIn() {
     };
 
     const isProviderLoading = (provider: string) => loadingProvider === provider;
+
+    // Handle Telegram authentication callback
+    useEffect(() => {
+        // Define global callback for Telegram widget
+        (window as any).onTelegramAuth = async (user: any) => {
+            setLoading(true);
+            setLoadingProvider('telegram');
+            setError('');
+
+            try {
+                console.log('[Telegram Auth] Received user data from widget:', user);
+
+                // Call our backend API
+                const response = await fetch('/api/auth/telegram', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        id: user.id.toString(),
+                        first_name: user.first_name,
+                        last_name: user.last_name,
+                        username: user.username,
+                        photo_url: user.photo_url,
+                        auth_date: user.auth_date.toString(),
+                        hash: user.hash,
+                    }),
+                });
+
+                const data = await response.json();
+
+                if (data.success && data.token) {
+                    console.log('[Telegram Auth] Authentication successful');
+
+                    // Store user data in localStorage (use same keys as AuthContext)
+                    localStorage.setItem('jwt_token', data.token);
+                    localStorage.setItem('user_data', JSON.stringify(data.user));
+
+                    // Redirect to callback URL or home
+                    const callbackUrl = searchParams.get('callbackUrl') || '/';
+                    window.location.href = callbackUrl; // Force full page reload to trigger AuthContext update
+                } else {
+                    setError(data.message || 'Telegram authentication failed');
+                    setLoading(false);
+                    setLoadingProvider(null);
+                }
+            } catch (err: any) {
+                console.error('[Telegram Auth] Error:', err);
+                setError(err?.message || 'Failed to authenticate with Telegram');
+                setLoading(false);
+                setLoadingProvider(null);
+            }
+        };
+
+        // Cleanup
+        return () => {
+            delete (window as any).onTelegramAuth;
+        };
+    }, [router, searchParams]);
+
+    // Load Telegram widget when modal is shown
+    useEffect(() => {
+        if (showTelegramWidget) {
+            const container = document.getElementById('telegram-login-container');
+            if (container && !container.hasChildNodes()) {
+                const script = document.createElement('script');
+                script.src = 'https://telegram.org/js/telegram-widget.js?22';
+                script.async = true;
+                script.setAttribute('data-telegram-login', process.env.NEXT_PUBLIC_TELEGRAM_BOT_USERNAME || 'your_bot_username');
+                script.setAttribute('data-size', 'large');
+                script.setAttribute('data-onauth', 'onTelegramAuth(user)');
+                script.setAttribute('data-request-access', 'write');
+                script.setAttribute('data-radius', '10');
+
+                script.onerror = () => {
+                    setError('Failed to load Telegram widget. Please check your bot configuration.');
+                    setShowTelegramWidget(false);
+                };
+
+                container.appendChild(script);
+            }
+        }
+    }, [showTelegramWidget]);
+
+    const handleTelegramLogin = () => {
+        setError('');
+        setShowTelegramWidget(true);
+    };
 
     return (
         <div className="min-h-screen bg-black flex items-center justify-center p-4 relative overflow-hidden">
@@ -206,15 +295,22 @@ export default function SignIn() {
                         <span>Apple - Coming Soon</span>
                     </button>
 
-                    {/* Telegram - Coming Soon */}
+                    {/* Telegram */}
                     <button
-                        disabled
-                        className="w-full h-14 bg-white/5 text-white/40 font-bold rounded-xl flex items-center justify-center gap-3 border border-white/10 cursor-not-allowed"
+                        onClick={handleTelegramLogin}
+                        disabled={loading}
+                        className="w-full h-14 bg-[#0088cc] hover:bg-[#0077b5] text-white font-bold rounded-xl flex items-center justify-center gap-3 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                     >
-                        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                            <path d="M20.665 3.717L2.946 10.554C1.944 10.954 1.942 11.512 2.753 11.761L7.303 13.18L17.834 6.541C18.332 6.237 18.789 6.406 18.415 6.738L9.888 14.432V14.431L9.88 14.444L9.567 19.123C10.024 19.123 10.226 18.913 10.481 18.667L12.677 16.53L17.243 19.904C18.085 20.368 18.691 20.129 18.9 19.123L21.905 5.034C22.212 3.804 21.436 3.245 20.665 3.717Z" fill="currentColor" />
-                        </svg>
-                        <span>Telegram - Coming Soon</span>
+                        {isProviderLoading('telegram') ? (
+                            <Loader2 className="h-5 w-5 animate-spin" />
+                        ) : (
+                            <>
+                                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                    <path d="M20.665 3.717L2.946 10.554C1.944 10.954 1.942 11.512 2.753 11.761L7.303 13.18L17.834 6.541C18.332 6.237 18.789 6.406 18.415 6.738L9.888 14.432V14.431L9.88 14.444L9.567 19.123C10.024 19.123 10.226 18.913 10.481 18.667L12.677 16.53L17.243 19.904C18.085 20.368 18.691 20.129 18.9 19.123L21.905 5.034C22.212 3.804 21.436 3.245 20.665 3.717Z" fill="currentColor" />
+                                </svg>
+                                <span>Continue with Telegram</span>
+                            </>
+                        )}
                     </button>
                 </div>
 
@@ -222,6 +318,91 @@ export default function SignIn() {
                     By logging in, you agree to our <Link href="/terms" className="underline hover:text-white">Terms</Link> and <Link href="/privacy" className="underline hover:text-white">Privacy Policy</Link>.
                 </div>
             </motion.div>
+
+            {/* Telegram Widget Modal */}
+            {showTelegramWidget && (
+                <div
+                    className="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center z-50 p-4"
+                    onClick={() => setShowTelegramWidget(false)}
+                >
+                    <motion.div
+                        initial={{ opacity: 0, scale: 0.9 }}
+                        animate={{ opacity: 1, scale: 1 }}
+                        className="bg-neutral-900 border border-white/10 p-8 rounded-3xl shadow-2xl max-w-md w-full"
+                        onClick={(e) => e.stopPropagation()}
+                    >
+                        <div className="flex justify-between items-center mb-6">
+                            <h2 className="text-2xl font-bold text-white">Login with Telegram</h2>
+                            <button
+                                onClick={() => setShowTelegramWidget(false)}
+                                className="text-gray-400 hover:text-white transition-colors"
+                            >
+                                <svg width="24" height="24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                    <line x1="18" y1="6" x2="6" y2="18"></line>
+                                    <line x1="6" y1="6" x2="18" y2="18"></line>
+                                </svg>
+                            </button>
+                        </div>
+
+                        <p className="text-gray-400 mb-6 text-center">
+                            Click the button below to authenticate with Telegram
+                        </p>
+
+                        <div
+                            id="telegram-login-container"
+                            className="flex justify-center items-center min-h-[60px]"
+                        />
+
+                        {/* Development Mode Test Login */}
+                        {process.env.NODE_ENV === 'development' && (
+                            <div className="mt-6 pt-6 border-t border-white/10">
+                                <p className="text-gray-500 text-sm mb-4 text-center">
+                                    Development Mode: Test without Telegram bot
+                                </p>
+                                <button
+                                    onClick={async () => {
+                                        setLoading(true);
+                                        setLoadingProvider('telegram');
+                                        try {
+                                            const response = await fetch('/api/auth/test-telegram-auth', {
+                                                method: 'POST',
+                                                headers: { 'Content-Type': 'application/json' },
+                                                body: JSON.stringify({
+                                                    telegramId: Math.floor(Math.random() * 1000000000).toString(),
+                                                    firstName: 'Test',
+                                                    lastName: 'User',
+                                                    username: 'testuser',
+                                                }),
+                                            });
+                                            const data = await response.json();
+                                            if (data.success && data.token) {
+                                                localStorage.setItem('jwt_token', data.token);
+                                                localStorage.setItem('user_data', JSON.stringify(data.user));
+                                                const callbackUrl = searchParams.get('callbackUrl') || '/';
+                                                window.location.href = callbackUrl;
+                                            } else {
+                                                setError(data.message || 'Test login failed');
+                                            }
+                                        } catch (err: any) {
+                                            setError(err.message || 'Test login failed');
+                                        } finally {
+                                            setLoading(false);
+                                            setLoadingProvider(null);
+                                        }
+                                    }}
+                                    className="w-full bg-yellow-500 hover:bg-yellow-400 text-black font-bold py-3 rounded-xl transition-colors"
+                                >
+                                    Test Login (Dev Only)
+                                </button>
+                            </div>
+                        )}
+
+                        <p className="text-gray-500 text-sm mt-6 text-center">
+                            Make sure you have Telegram installed and are logged in
+                        </p>
+                    </motion.div>
+                </div>
+            )}
         </div>
     );
 }
