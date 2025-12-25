@@ -82,7 +82,7 @@ const Navbar = () => {
                             ) : (
                                 <Link
                                     href="/auth/signin"
-                                    className="text-gray-300 hover:text-white px-3 py-2 rounded-md text-sm font-medium"
+                                    className="bg-yellow-500 hover:bg-yellow-400 text-black px-4 py-2 rounded-md text-sm font-bold transition-colors"
                                 >
                                     Login
                                 </Link>
@@ -161,7 +161,7 @@ const Navbar = () => {
                         ) : (
                             <Link
                                 href="/auth/signin"
-                                className="w-full text-left text-gray-300 hover:text-white block px-3 py-2 rounded-md text-base font-medium"
+                                className="w-full text-center bg-yellow-500 hover:bg-yellow-400 text-black block px-4 py-3 rounded-md text-base font-bold transition-colors"
                             >
                                 Login
                             </Link>
