@@ -27,6 +27,7 @@ export default function PlayGame() {
   const [showFullscreenPrompt, setShowFullscreenPrompt] = useState<boolean>(false); // Show fullscreen prompt on mobile
   const [isFullscreen, setIsFullscreen] = useState<boolean>(false); // Track fullscreen state
   const [iframeError, setIframeError] = useState<boolean>(false); // Track iframe load errors
+  const [showInAppBrowserWarning, setShowInAppBrowserWarning] = useState<boolean>(false); // Show warning for in-app browsers
   const initializingRef = useRef<boolean>(false); // Prevent concurrent initializations
   const loadingTimeoutRef = useRef<NodeJS.Timeout | null>(null); // Timeout for loading screen
   const gameContainerRef = useRef<HTMLDivElement | null>(null); // Reference to game container
@@ -278,6 +279,17 @@ export default function PlayGame() {
     };
   }, []);
 
+  // Check for in-app browser on mount
+  useEffect(() => {
+    if (isInAppBrowser()) {
+      console.log('[PlayGame] In-app browser detected:', getInAppBrowserName());
+      // Show warning after a short delay so user sees the game first
+      setTimeout(() => {
+        setShowInAppBrowserWarning(true);
+      }, 1000);
+    }
+  }, []);
+
   // Detect if user is on mobile
   const isMobile = () => {
     if (typeof window === 'undefined') return false;
@@ -294,6 +306,45 @@ export default function PlayGame() {
   const isStandalone = () => {
     if (typeof window === 'undefined') return false;
     return (window.navigator as any).standalone || window.matchMedia('(display-mode: standalone)').matches;
+  };
+
+  // Detect if user is in an in-app browser (Telegram, LINE, Facebook, etc.)
+  const isInAppBrowser = () => {
+    if (typeof window === 'undefined') return false;
+    const ua = navigator.userAgent || navigator.vendor || (window as any).opera;
+
+    // Check for common in-app browsers
+    const inAppPatterns = [
+      /FBAN|FBAV/i, // Facebook
+      /Instagram/i, // Instagram
+      /Line/i, // LINE
+      /Twitter/i, // Twitter
+      /Telegram/i, // Telegram (might be TelegramBot or other variants)
+      /micromessenger/i, // WeChat
+      /snapchat/i, // Snapchat
+      /LinkedInApp/i, // LinkedIn
+      /FB_IAB/i, // Facebook in-app browser
+      /FBIOS/i, // Facebook iOS
+    ];
+
+    return inAppPatterns.some(pattern => pattern.test(ua));
+  };
+
+  // Get the name of the in-app browser for user-friendly messages
+  const getInAppBrowserName = () => {
+    if (typeof window === 'undefined') return 'in-app browser';
+    const ua = navigator.userAgent || navigator.vendor || (window as any).opera;
+
+    if (/FBAN|FBAV|FB_IAB|FBIOS/i.test(ua)) return 'Facebook';
+    if (/Instagram/i.test(ua)) return 'Instagram';
+    if (/Line/i.test(ua)) return 'LINE';
+    if (/Twitter/i.test(ua)) return 'Twitter';
+    if (/Telegram/i.test(ua)) return 'Telegram';
+    if (/micromessenger/i.test(ua)) return 'WeChat';
+    if (/snapchat/i.test(ua)) return 'Snapchat';
+    if (/LinkedInApp/i.test(ua)) return 'LinkedIn';
+
+    return 'in-app browser';
   };
 
   // Enter fullscreen mode
@@ -477,11 +528,68 @@ export default function PlayGame() {
       ref={gameContainerRef}
       className="fixed inset-0 w-full h-full bg-black overflow-hidden"
       style={{
-        // iOS-specific: use viewport height that accounts for browser UI
-        height: isIOS() ? '100dvh' : '100vh',
-        minHeight: isIOS() ? '-webkit-fill-available' : '100vh',
-      }}
+        // Use dynamic viewport height for all devices to account for browser UI
+        height: '100dvh',
+        minHeight: '100dvh',
+        maxHeight: '100dvh',
+        position: 'fixed',
+        top: 0,
+        left: 0,
+        right: 0,
+        bottom: 0,
+        margin: 0,
+        padding: 0,
+        touchAction: 'none', // Prevent pull-to-refresh and other gestures
+        overscrollBehavior: 'none', // Prevent overscroll effects
+      } as React.CSSProperties}
     >
+      {/* In-app browser warning - compact banner at top */}
+      {showInAppBrowserWarning && !iframeLoading && (
+        <div className="absolute top-0 left-0 right-0 z-40 bg-gradient-to-r from-orange-600 to-orange-700 shadow-lg">
+          <div className="flex items-center gap-2 px-3 py-2">
+            <svg
+              className="w-5 h-5 text-white flex-shrink-0"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+              />
+            </svg>
+            <div className="flex-1 min-w-0">
+              <p className="text-white text-xs">
+                <span className="font-semibold">In {getInAppBrowserName()}</span> - For better fullscreen, open in Safari/Chrome
+              </p>
+            </div>
+            <button
+              onClick={() => {
+                const currentUrl = window.location.href;
+                navigator.clipboard.writeText(currentUrl).then(() => {
+                  alert('Link copied! Paste in your browser.');
+                }).catch(() => {
+                  alert(`Copy this link:\n${currentUrl}`);
+                });
+              }}
+              className="px-2 py-1 bg-white text-orange-700 font-bold text-xs rounded hover:bg-orange-50 transition-colors flex-shrink-0"
+            >
+              Copy
+            </button>
+            <button
+              onClick={() => setShowInAppBrowserWarning(false)}
+              className="text-white/90 hover:text-white flex-shrink-0 p-1"
+            >
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+              </svg>
+            </button>
+          </div>
+        </div>
+      )}
+
       {/* Loading overlay */}
       {iframeLoading && (
         <div
@@ -626,7 +734,17 @@ export default function PlayGame() {
           border: 'none',
           margin: 0,
           padding: 0,
-          display: iframeLoading ? 'none' : 'block' // Hide iframe while loading to prevent flash
+          display: iframeLoading ? 'none' : 'block', // Hide iframe while loading to prevent flash
+          width: '100%',
+          height: '100%',
+          minHeight: '100%',
+          maxHeight: '100%',
+          overflow: 'hidden',
+          position: 'absolute',
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
         }}
         allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; fullscreen"
         allowFullScreen
