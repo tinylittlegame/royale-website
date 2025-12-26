@@ -422,7 +422,7 @@ export default function PlayGame() {
   };
 
   const handleIframeLoad = () => {
-    console.log("[PlayGame] Game iframe onLoad event fired");
+    console.log("[PlayGame] Game iframe loaded successfully");
 
     // Clear the timeout since iframe loaded successfully
     if (iframeTimeoutRef.current) {
@@ -430,14 +430,12 @@ export default function PlayGame() {
       iframeTimeoutRef.current = null;
     }
 
-    // Immediately hide loading screen and show game
-    console.log("[PlayGame] Game iframe loaded successfully - showing game");
+    // Hide website loading screen and show game (game will handle its own loading)
     setIframeLoading(false);
     setIframeError(false);
 
     // On mobile, automatically try to enter fullscreen after loading
     if (isMobile() && !isFullscreen && !isIOS()) {
-      // Small delay to ensure smooth transition (skip on iOS as it won't work)
       setTimeout(() => {
         enterFullscreen();
       }, 300);
@@ -508,7 +506,7 @@ export default function PlayGame() {
             <li>Your browser blocking the game</li>
           </ul>
           <p className="text-gray-400 text-sm">
-            Game URL: <span className="text-yellow-500 font-mono text-xs break-all">{GAME_URL}</span>
+            Please check your internet connection and try again.
           </p>
         </div>
         <div className="flex gap-4">
@@ -674,7 +672,7 @@ export default function PlayGame() {
       {/* Loading overlay */}
       {iframeLoading && !isPortrait && (
         <div
-          className="absolute inset-0 z-50 flex flex-col items-center justify-center bg-black gap-4 cursor-pointer"
+          className="absolute inset-0 z-50 flex flex-col items-center justify-center bg-gradient-to-b from-black via-gray-900 to-black gap-4 cursor-pointer"
           onClick={() => {
             if (isMobile() && !isFullscreen && !isIOS()) {
               enterFullscreen();
