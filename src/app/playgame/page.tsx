@@ -27,6 +27,8 @@ export default function PlayGame() {
   const [showFullscreenPrompt, setShowFullscreenPrompt] = useState<boolean>(false); // Show fullscreen prompt on mobile
   const [isFullscreen, setIsFullscreen] = useState<boolean>(false); // Track fullscreen state
   const [iframeError, setIframeError] = useState<boolean>(false); // Track iframe load errors
+  const [showInAppBrowserWarning, setShowInAppBrowserWarning] = useState<boolean>(false); // Show warning for in-app browsers
+  const [isPortrait, setIsPortrait] = useState<boolean>(false); // Track if device is in portrait orientation
   const initializingRef = useRef<boolean>(false); // Prevent concurrent initializations
   const loadingTimeoutRef = useRef<NodeJS.Timeout | null>(null); // Timeout for loading screen
   const gameContainerRef = useRef<HTMLDivElement | null>(null); // Reference to game container
@@ -196,17 +198,11 @@ export default function PlayGame() {
     }
   }, [authLoading, status, jwtToken, token, initialize, authFailed, router]);
 
-  // Handle iframe loading with minimum display time
+  // Handle iframe loading
   useEffect(() => {
     if (token && userId) {
-      // Show loading screen for at least 2 seconds so users know something is happening
       setIframeLoading(true);
       setIframeError(false);
-
-      loadingTimeoutRef.current = setTimeout(() => {
-        console.log("[PlayGame] Minimum loading time elapsed");
-        // Loading screen will be hidden when iframe loads
-      }, 2000);
 
       // Set a max timeout for iframe loading (30 seconds)
       iframeTimeoutRef.current = setTimeout(() => {
@@ -217,9 +213,6 @@ export default function PlayGame() {
     }
 
     return () => {
-      if (loadingTimeoutRef.current) {
-        clearTimeout(loadingTimeoutRef.current);
-      }
       if (iframeTimeoutRef.current) {
         clearTimeout(iframeTimeoutRef.current);
       }
@@ -278,6 +271,47 @@ export default function PlayGame() {
     };
   }, []);
 
+  // Check for in-app browser on mount
+  useEffect(() => {
+    if (isInAppBrowser()) {
+      console.log('[PlayGame] In-app browser detected:', getInAppBrowserName());
+      // Show warning after a short delay so user sees the game first
+      setTimeout(() => {
+        setShowInAppBrowserWarning(true);
+      }, 1000);
+    }
+  }, []);
+
+  // Detect and track device orientation
+  useEffect(() => {
+    const checkOrientation = () => {
+      // Check if device is in portrait mode
+      const portrait = window.innerHeight > window.innerWidth;
+      console.log('[PlayGame] Orientation check:', {
+        width: window.innerWidth,
+        height: window.innerHeight,
+        isPortrait: portrait
+      });
+      setIsPortrait(portrait);
+    };
+
+    // Check on mount
+    checkOrientation();
+
+    // Listen for orientation and resize changes
+    window.addEventListener('orientationchange', checkOrientation);
+    window.addEventListener('resize', checkOrientation);
+
+    // Also check after a short delay to catch delayed browser UI changes
+    const timeoutId = setTimeout(checkOrientation, 100);
+
+    return () => {
+      window.removeEventListener('orientationchange', checkOrientation);
+      window.removeEventListener('resize', checkOrientation);
+      clearTimeout(timeoutId);
+    };
+  }, []);
+
   // Detect if user is on mobile
   const isMobile = () => {
     if (typeof window === 'undefined') return false;
@@ -294,6 +328,45 @@ export default function PlayGame() {
   const isStandalone = () => {
     if (typeof window === 'undefined') return false;
     return (window.navigator as any).standalone || window.matchMedia('(display-mode: standalone)').matches;
+  };
+
+  // Detect if user is in an in-app browser (Telegram, LINE, Facebook, etc.)
+  const isInAppBrowser = () => {
+    if (typeof window === 'undefined') return false;
+    const ua = navigator.userAgent || navigator.vendor || (window as any).opera;
+
+    // Check for common in-app browsers
+    const inAppPatterns = [
+      /FBAN|FBAV/i, // Facebook
+      /Instagram/i, // Instagram
+      /Line/i, // LINE
+      /Twitter/i, // Twitter
+      /Telegram/i, // Telegram (might be TelegramBot or other variants)
+      /micromessenger/i, // WeChat
+      /snapchat/i, // Snapchat
+      /LinkedInApp/i, // LinkedIn
+      /FB_IAB/i, // Facebook in-app browser
+      /FBIOS/i, // Facebook iOS
+    ];
+
+    return inAppPatterns.some(pattern => pattern.test(ua));
+  };
+
+  // Get the name of the in-app browser for user-friendly messages
+  const getInAppBrowserName = () => {
+    if (typeof window === 'undefined') return 'in-app browser';
+    const ua = navigator.userAgent || navigator.vendor || (window as any).opera;
+
+    if (/FBAN|FBAV|FB_IAB|FBIOS/i.test(ua)) return 'Facebook';
+    if (/Instagram/i.test(ua)) return 'Instagram';
+    if (/Line/i.test(ua)) return 'LINE';
+    if (/Twitter/i.test(ua)) return 'Twitter';
+    if (/Telegram/i.test(ua)) return 'Telegram';
+    if (/micromessenger/i.test(ua)) return 'WeChat';
+    if (/snapchat/i.test(ua)) return 'Snapchat';
+    if (/LinkedInApp/i.test(ua)) return 'LinkedIn';
+
+    return 'in-app browser';
   };
 
   // Enter fullscreen mode
@@ -357,29 +430,25 @@ export default function PlayGame() {
       iframeTimeoutRef.current = null;
     }
 
-    // Wait for minimum loading time before hiding loading screen
-    const timeElapsed = loadingTimeoutRef.current ? 2000 : 0;
+    // Immediately hide loading screen and show game
+    console.log("[PlayGame] Game iframe loaded successfully - showing game");
+    setIframeLoading(false);
+    setIframeError(false);
 
-    setTimeout(() => {
-      console.log("[PlayGame] Game iframe loaded successfully - hiding loading screen");
-      setIframeLoading(false);
-      setIframeError(false);
+    // On mobile, automatically try to enter fullscreen after loading
+    if (isMobile() && !isFullscreen && !isIOS()) {
+      // Small delay to ensure smooth transition (skip on iOS as it won't work)
+      setTimeout(() => {
+        enterFullscreen();
+      }, 300);
+    }
 
-      // On mobile, automatically try to enter fullscreen after loading
-      if (isMobile() && !isFullscreen && !isIOS()) {
-        // Small delay to ensure smooth transition (skip on iOS as it won't work)
-        setTimeout(() => {
-          enterFullscreen();
-        }, 500);
-      }
-
-      // On iOS, try to hide the address bar by scrolling
-      if (isIOS()) {
-        setTimeout(() => {
-          window.scrollTo(0, 1);
-        }, 100);
-      }
-    }, Math.max(0, timeElapsed));
+    // On iOS, try to hide the address bar by scrolling
+    if (isIOS()) {
+      setTimeout(() => {
+        window.scrollTo(0, 1);
+      }, 100);
+    }
   };
 
   const handleIframeError = () => {
@@ -461,7 +530,10 @@ export default function PlayGame() {
   }
 
   const branch = process.env.BRANCH === "develop" ? "&branch=develop" : "";
-  const finalGameUrl = `${GAME_URL}?user=${userId}&login-token=${token}${branch}`;
+  // Pass viewport dimensions to game so it can scale properly
+  const viewportWidth = typeof window !== 'undefined' ? window.innerWidth : 0;
+  const viewportHeight = typeof window !== 'undefined' ? window.innerHeight : 0;
+  const finalGameUrl = `${GAME_URL}?user=${userId}&login-token=${token}${branch}&vw=${viewportWidth}&vh=${viewportHeight}`;
 
   console.log("[PlayGame] Rendering game with:", {
     GAME_URL,
@@ -477,13 +549,130 @@ export default function PlayGame() {
       ref={gameContainerRef}
       className="fixed inset-0 w-full h-full bg-black overflow-hidden"
       style={{
-        // iOS-specific: use viewport height that accounts for browser UI
-        height: isIOS() ? '100dvh' : '100vh',
-        minHeight: isIOS() ? '-webkit-fill-available' : '100vh',
-      }}
+        // Use dynamic viewport height for all devices to account for browser UI
+        height: '100dvh',
+        minHeight: '100dvh',
+        maxHeight: '100dvh',
+        position: 'fixed',
+        top: 0,
+        left: 0,
+        right: 0,
+        bottom: 0,
+        margin: 0,
+        padding: 0,
+        touchAction: 'none', // Prevent pull-to-refresh and other gestures
+        overscrollBehavior: 'none', // Prevent overscroll effects
+      } as React.CSSProperties}
     >
+      {/* Portrait mode overlay - force landscape orientation */}
+      {isPortrait && (
+        <div className="absolute inset-0 z-50 flex flex-col items-center justify-center bg-gradient-to-br from-black via-gray-900 to-black p-8">
+          <motion.div
+            initial={{ opacity: 0, rotate: 0 }}
+            animate={{ opacity: 1, rotate: [0, -90, -90, -90] }}
+            transition={{ duration: 1, times: [0, 0.3, 0.7, 1] }}
+            className="mb-8"
+          >
+            <svg
+              className="w-24 h-24 text-yellow-500"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={1.5}
+                d="M12 18h.01M8 21h8a2 2 0 002-2V5a2 2 0 00-2-2H8a2 2 0 00-2 2v14a2 2 0 002 2z"
+              />
+            </svg>
+          </motion.div>
+
+          <div className="text-center max-w-sm">
+            <h2 className="text-3xl font-bold text-white mb-4 uppercase tracking-wider">
+              Rotate Your Device
+            </h2>
+            <p className="text-gray-400 text-lg mb-6">
+              Please rotate your device to landscape mode for the best gaming experience
+            </p>
+
+            {/* Rotation icon animation */}
+            <motion.div
+              animate={{ rotate: 360 }}
+              transition={{ duration: 2, repeat: Infinity, ease: "linear" }}
+              className="inline-block"
+            >
+              <svg
+                className="w-16 h-16 text-yellow-500"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"
+                />
+              </svg>
+            </motion.div>
+          </div>
+
+          <div className="mt-8 text-gray-500 text-sm">
+            Landscape mode required • Width × Height
+          </div>
+        </div>
+      )}
+
+      {/* In-app browser warning - compact banner at top */}
+      {showInAppBrowserWarning && !iframeLoading && !isPortrait && (
+        <div className="absolute top-0 left-0 right-0 z-40 bg-gradient-to-r from-orange-600 to-orange-700 shadow-lg">
+          <div className="flex items-center gap-2 px-3 py-2">
+            <svg
+              className="w-5 h-5 text-white flex-shrink-0"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+              />
+            </svg>
+            <div className="flex-1 min-w-0">
+              <p className="text-white text-xs">
+                <span className="font-semibold">In {getInAppBrowserName()}</span> - For better fullscreen, open in Safari/Chrome
+              </p>
+            </div>
+            <button
+              onClick={() => {
+                const currentUrl = window.location.href;
+                navigator.clipboard.writeText(currentUrl).then(() => {
+                  alert('Link copied! Paste in your browser.');
+                }).catch(() => {
+                  alert(`Copy this link:\n${currentUrl}`);
+                });
+              }}
+              className="px-2 py-1 bg-white text-orange-700 font-bold text-xs rounded hover:bg-orange-50 transition-colors flex-shrink-0"
+            >
+              Copy
+            </button>
+            <button
+              onClick={() => setShowInAppBrowserWarning(false)}
+              className="text-white/90 hover:text-white flex-shrink-0 p-1"
+            >
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+              </svg>
+            </button>
+          </div>
+        </div>
+      )}
+
       {/* Loading overlay */}
-      {iframeLoading && (
+      {iframeLoading && !isPortrait && (
         <div
           className="absolute inset-0 z-50 flex flex-col items-center justify-center bg-black gap-4 cursor-pointer"
           onClick={() => {
@@ -512,7 +701,7 @@ export default function PlayGame() {
       )}
 
       {/* Fullscreen prompt for mobile - only shows if auto-fullscreen failed */}
-      {showFullscreenPrompt && !iframeLoading && (
+      {showFullscreenPrompt && !iframeLoading && !isPortrait && (
         <div className="absolute inset-0 z-50 flex flex-col items-center justify-center bg-black/95 backdrop-blur-sm p-6">
           <motion.div
             initial={{ opacity: 0, scale: 0.9 }}
@@ -624,12 +813,27 @@ export default function PlayGame() {
         className="absolute inset-0 w-full h-full border-none"
         style={{
           border: 'none',
+          outline: 'none',
           margin: 0,
           padding: 0,
-          display: iframeLoading ? 'none' : 'block' // Hide iframe while loading to prevent flash
+          display: (iframeLoading || isPortrait) ? 'none' : 'block', // Hide iframe while loading or in portrait mode
+          width: '100%',
+          height: '100%',
+          minWidth: '100%',
+          minHeight: '100%',
+          maxWidth: '100%',
+          maxHeight: '100%',
+          overflow: 'hidden',
+          position: 'absolute',
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          objectFit: 'fill' as any, // Try to fill the entire space
         }}
         allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; fullscreen"
         allowFullScreen
+        scrolling="no"
         title="Tiny Little Royale"
       />
 

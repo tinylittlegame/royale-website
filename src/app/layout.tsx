@@ -6,6 +6,8 @@ import ConditionalLayout from "@/components/ConditionalLayout";
 
 const inter = Inter({ subsets: ["latin"] });
 
+const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || "https://royaleapp.tinylittle.io";
+
 export const metadata: Metadata = {
   title: "Tiny Little Royale",
   description: "Tiny little royale. โหมดตบฮุนเซนย - A fast-paced 2.5D multiplayer battle game. Fight players worldwide!",
@@ -24,11 +26,11 @@ export const metadata: Metadata = {
   openGraph: {
     title: "Tiny Little Royale",
     description: "Tiny little royale. โหมดตบฮุนเซนย 🎮",
-    url: "https://royaleapp.tinylittle.io",
+    url: baseUrl,
     siteName: "Tiny Little Royale",
     images: [
       {
-        url: "/images/2_icon_husen_512.png",
+        url: `${baseUrl}/images/2_icon_husen_512.png`,
         width: 512,
         height: 512,
         alt: "Tiny Little Royale - โหมดตบฮุนเซนย",
@@ -41,7 +43,7 @@ export const metadata: Metadata = {
     card: "summary_large_image",
     title: "Tiny Little Royale",
     description: "Tiny little royale. โหมดตบฮุนเซนย 🎮",
-    images: ["/images/2_icon_husen_512.png"],
+    images: [`${baseUrl}/images/2_icon_husen_512.png`],
   },
 };
 
