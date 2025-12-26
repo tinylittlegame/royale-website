@@ -1,18 +1,18 @@
-'use client';
+"use client";
 
-import { motion } from 'framer-motion';
-import Link from 'next/link';
-import Image from 'next/image';
-import { ArrowRight, Apple, Play, Share2 } from 'lucide-react';
-import { useState } from 'react';
+import { motion } from "framer-motion";
+import Link from "next/link";
+import Image from "next/image";
+import { ArrowRight, Apple, Play, Share2 } from "lucide-react";
+import { useState } from "react";
 
 export default function Home() {
   const [shareSuccess, setShareSuccess] = useState(false);
 
   const handleShare = async () => {
     const shareData = {
-      title: 'Tiny Little Royale',
-      text: 'Tiny little royale. โหมดตบฮุนเซนย 🎮',
+      title: "Tiny Little Royale",
+      text: "Tiny little royale. โหมดตบฮุนเซน 🎮",
       url: `${window.location.origin}/playgame`,
     };
 
@@ -20,16 +20,18 @@ export default function Home() {
       // Try to use Web Share API (works on mobile)
       if (navigator.share) {
         await navigator.share(shareData);
-        console.log('[Share] Shared successfully via Web Share API');
+        console.log("[Share] Shared successfully via Web Share API");
       } else {
         // Fallback: Copy to clipboard
-        await navigator.clipboard.writeText(`${shareData.text}\n${shareData.url}`);
+        await navigator.clipboard.writeText(
+          `${shareData.text}\n${shareData.url}`,
+        );
         setShareSuccess(true);
         setTimeout(() => setShareSuccess(false), 3000);
-        console.log('[Share] Link copied to clipboard');
+        console.log("[Share] Link copied to clipboard");
       }
     } catch (err) {
-      console.error('[Share] Error sharing:', err);
+      console.error("[Share] Error sharing:", err);
     }
   };
   return (
@@ -57,12 +59,15 @@ export default function Home() {
           </div>
 
           <h1 className="text-5xl md:text-7xl font-extrabold text-white mb-6 tracking-tight">
-            Tiny Little <span className="text-transparent bg-clip-text bg-gradient-to-r from-yellow-400 to-orange-500">Royale</span>
+            Tiny Little{" "}
+            <span className="text-transparent bg-clip-text bg-gradient-to-r from-yellow-400 to-orange-500">
+              Royale
+            </span>
           </h1>
 
           <p className="text-xl text-gray-400 mb-10 max-w-2xl mx-auto">
-            Fly into the arena, battle players worldwide, and become the champion.
-            The most chaotic and fun mini battle royale is here!
+            Fly into the arena, battle players worldwide, and become the
+            champion. The most chaotic and fun mini battle royale is here!
           </p>
 
           <div className="flex flex-col items-center gap-8 w-full">
@@ -91,7 +96,13 @@ export default function Home() {
                 target="_blank"
                 className="px-6 py-3 bg-white/10 backdrop-blur-sm border border-white/20 rounded-xl font-medium text-white hover:bg-white/20 transition-all flex items-center gap-2 text-sm"
               >
-                <svg viewBox="0 0 24 24" fill="currentColor" className="w-5 h-5"><path d="M3,20.5V3.5C3,2.91 3.34,2.39 3.84,2.15L13.69,12L3.84,21.85C3.34,21.6 3,21.09 3,20.5M16.81,15.12L6.05,21.34L14.54,12.85L16.81,15.12M20.3,12.5L17.38,15.69L15.12,13.43L16.81,11.74L17.38,12.31C18.15,12.8 19.06,12.92 20.3,12.5M16.81,8.88L14.54,11.15L6.05,2.66L16.81,8.88Z" /></svg>
+                <svg
+                  viewBox="0 0 24 24"
+                  fill="currentColor"
+                  className="w-5 h-5"
+                >
+                  <path d="M3,20.5V3.5C3,2.91 3.34,2.39 3.84,2.15L13.69,12L3.84,21.85C3.34,21.6 3,21.09 3,20.5M16.81,15.12L6.05,21.34L14.54,12.85L16.81,15.12M20.3,12.5L17.38,15.69L15.12,13.43L16.81,11.74L17.38,12.31C18.15,12.8 19.06,12.92 20.3,12.5M16.81,8.88L14.54,11.15L6.05,2.66L16.81,8.88Z" />
+                </svg>
                 Google Play
               </Link>
             </div>
@@ -117,7 +128,10 @@ export default function Home() {
                   />
                 </div>
                 <span>Share Game</span>
-                <Share2 size={18} className="group-hover:rotate-12 transition-transform" />
+                <Share2
+                  size={18}
+                  className="group-hover:rotate-12 transition-transform"
+                />
               </button>
 
               {/* Success tooltip */}
@@ -140,7 +154,9 @@ export default function Home() {
       <section className="w-full py-20 px-4 bg-black relative z-10">
         <div className="max-w-5xl mx-auto">
           <div className="text-center mb-10">
-            <h2 className="text-3xl md:text-5xl font-bold text-white mb-4">Watch the Trailer</h2>
+            <h2 className="text-3xl md:text-5xl font-bold text-white mb-4">
+              Watch the Trailer
+            </h2>
             <div className="h-1 w-20 bg-yellow-500 mx-auto rounded-full" />
           </div>
 
@@ -167,17 +183,29 @@ export default function Home() {
             <div className="p-6 bg-black/50 rounded-2xl border border-white/10 hover:border-yellow-500/50 transition-colors">
               <div className="text-4xl mb-4">🚀</div>
               <h3 className="text-xl font-bold text-white mb-2">Fast Paced</h3>
-              <p className="text-gray-400">Jump in and play instantly. Matches are quick, intense, and full of action.</p>
+              <p className="text-gray-400">
+                Jump in and play instantly. Matches are quick, intense, and full
+                of action.
+              </p>
             </div>
             <div className="p-6 bg-black/50 rounded-2xl border border-white/10 hover:border-purple-500/50 transition-colors">
               <div className="text-4xl mb-4">🌍</div>
-              <h3 className="text-xl font-bold text-white mb-2">Global Battles</h3>
-              <p className="text-gray-400">Fight against players from around the world. Climb the leaderboards.</p>
+              <h3 className="text-xl font-bold text-white mb-2">
+                Global Battles
+              </h3>
+              <p className="text-gray-400">
+                Fight against players from around the world. Climb the
+                leaderboards.
+              </p>
             </div>
             <div className="p-6 bg-black/50 rounded-2xl border border-white/10 hover:border-blue-500/50 transition-colors">
               <div className="text-4xl mb-4">🎮</div>
-              <h3 className="text-xl font-bold text-white mb-2">Cross Platform</h3>
-              <p className="text-gray-400">Play on Web, iOS, or Android with the same account.</p>
+              <h3 className="text-xl font-bold text-white mb-2">
+                Cross Platform
+              </h3>
+              <p className="text-gray-400">
+                Play on Web, iOS, or Android with the same account.
+              </p>
             </div>
           </div>
         </div>
