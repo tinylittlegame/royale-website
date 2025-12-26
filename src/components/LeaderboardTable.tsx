@@ -203,13 +203,12 @@ export default function LeaderboardTable() {
             <div className="overflow-x-auto">
                 <div className="min-w-full">
                     {/* Header */}
-                    <div className="grid grid-cols-12 gap-4 px-6 py-4 bg-gradient-to-r from-gray-900 to-black border-b border-white/10 text-gray-400 text-sm font-bold uppercase">
+                    <div className="grid grid-cols-12 gap-2 md:gap-4 px-3 md:px-6 py-4 bg-gradient-to-r from-gray-900 to-black border-b border-white/10 text-gray-400 text-xs md:text-sm font-bold uppercase">
                         <div className="col-span-1">Rank</div>
-                        <div className="col-span-4">Player</div>
-                        <div className="col-span-2 text-center">Level</div>
-                        <div className="col-span-2 text-center">K/D</div>
-                        <div className="col-span-1 text-center">Kills</div>
-                        <div className="col-span-2 text-right">Points</div>
+                        <div className="col-span-5 md:col-span-4">Player</div>
+                        <div className="hidden md:block md:col-span-2 text-center">Level</div>
+                        <div className="col-span-3 md:col-span-2 text-center">K/D</div>
+                        <div className="col-span-3 md:col-span-3 text-right">Points</div>
                     </div>
 
                     {/* Player Rows */}
@@ -231,22 +230,22 @@ export default function LeaderboardTable() {
                                         initial={{ opacity: 0, x: -20 }}
                                         animate={{ opacity: 1, x: 0 }}
                                         transition={{ delay: index * 0.05 }}
-                                        className="grid grid-cols-12 gap-4 px-6 py-4 hover:bg-gradient-to-r hover:from-yellow-500/5 hover:to-transparent transition-all duration-300 group"
+                                        className="grid grid-cols-12 gap-2 md:gap-4 px-3 md:px-6 py-3 md:py-4 hover:bg-gradient-to-r hover:from-yellow-500/5 hover:to-transparent transition-all duration-300 group"
                                     >
                                         {/* Rank */}
                                         <div className="col-span-1 flex items-center">
-                                            <div className={`${getRankBadgeClass(player.rank)} w-10 h-10 rounded-lg flex items-center justify-center font-bold text-sm shadow-md`}>
+                                            <div className={`${getRankBadgeClass(player.rank)} w-8 h-8 md:w-10 md:h-10 rounded-lg flex items-center justify-center font-bold text-xs md:text-sm shadow-md`}>
                                                 {player.rank}
                                             </div>
                                         </div>
 
                                         {/* Player Info */}
-                                        <div className="col-span-4 flex items-center gap-3">
+                                        <div className="col-span-5 md:col-span-4 flex items-center gap-2 md:gap-3">
                                             <div className="relative">
                                                 <img
                                                     src={player.photo || '/default-avatar.png'}
                                                     alt={player.displayName}
-                                                    className="w-12 h-12 rounded-lg object-cover border-2 border-white/10 group-hover:border-yellow-500/50 transition-colors"
+                                                    className="w-10 h-10 md:w-12 md:h-12 rounded-lg object-cover border-2 border-white/10 group-hover:border-yellow-500/50 transition-colors"
                                                 />
                                                 {player.rank <= 10 && (
                                                     <div className="absolute -top-1 -right-1 bg-purple-600 text-white text-xs font-bold px-1.5 py-0.5 rounded-full">
@@ -255,12 +254,12 @@ export default function LeaderboardTable() {
                                                 )}
                                             </div>
                                             <div className="flex flex-col min-w-0">
-                                                <div className="flex items-center gap-2">
-                                                    <span className="text-white font-bold truncate group-hover:text-yellow-400 transition-colors">
+                                                <div className="flex items-center gap-1 md:gap-2">
+                                                    <span className="text-white font-bold text-sm md:text-base truncate group-hover:text-yellow-400 transition-colors">
                                                         {player.displayName}
                                                     </span>
                                                     {multikills > 0 && (
-                                                        <div className="relative group/multikill">
+                                                        <div className="relative group/multikill hidden md:block">
                                                             <Zap className="w-4 h-4 text-orange-500" />
                                                             <div className="absolute hidden group-hover/multikill:block bg-black text-white text-xs px-2 py-1 rounded whitespace-nowrap -top-8 left-1/2 transform -translate-x-1/2">
                                                                 {multikills} multikills
@@ -270,23 +269,23 @@ export default function LeaderboardTable() {
                                                 </div>
                                                 {player.country && (
                                                     <span className="text-xs text-gray-500 flex items-center gap-1">
-                                                        <span className="text-lg">{getFlagEmoji(player.country)}</span>
-                                                        {player.country}
+                                                        <span className="text-base md:text-lg">{getFlagEmoji(player.country)}</span>
+                                                        <span className="hidden md:inline">{player.country}</span>
                                                     </span>
                                                 )}
                                             </div>
                                         </div>
 
-                                        {/* Level */}
-                                        <div className="col-span-2 flex items-center justify-center">
+                                        {/* Level - Hidden on mobile */}
+                                        <div className="hidden md:flex md:col-span-2 items-center justify-center">
                                             <div className="bg-blue-900/30 border border-blue-500/30 px-3 py-1 rounded-lg">
                                                 <span className="text-blue-400 font-bold text-sm">Lv.{player.level}</span>
                                             </div>
                                         </div>
 
                                         {/* K/D Ratio */}
-                                        <div className="col-span-2 flex items-center justify-center">
-                                            <div className={`px-3 py-1 rounded-lg font-mono font-bold ${
+                                        <div className="col-span-3 md:col-span-2 flex items-center justify-center">
+                                            <div className={`px-2 md:px-3 py-1 rounded-lg font-mono font-bold text-xs md:text-sm ${
                                                 parseFloat(kdRatio) >= 2 ? 'bg-green-900/30 text-green-400 border border-green-500/30' :
                                                 parseFloat(kdRatio) >= 1 ? 'bg-yellow-900/30 text-yellow-400 border border-yellow-500/30' :
                                                 'bg-red-900/30 text-red-400 border border-red-500/30'
@@ -295,8 +294,8 @@ export default function LeaderboardTable() {
                                             </div>
                                         </div>
 
-                                        {/* Kills */}
-                                        <div className="col-span-1 flex items-center justify-center">
+                                        {/* Kills - Hidden on mobile, shown on desktop */}
+                                        <div className="hidden md:flex md:col-span-1 items-center justify-center">
                                             <div className="flex items-center gap-1 text-red-400">
                                                 <Skull className="w-4 h-4" />
                                                 <span className="font-bold">{player.gameResult.kill}</span>
@@ -304,9 +303,9 @@ export default function LeaderboardTable() {
                                         </div>
 
                                         {/* Points */}
-                                        <div className="col-span-2 flex items-center justify-end">
+                                        <div className="col-span-3 md:col-span-2 flex items-center justify-end">
                                             <div className="text-right">
-                                                <div className="text-green-400 font-mono font-bold text-lg">
+                                                <div className="text-green-400 font-mono font-bold text-sm md:text-lg">
                                                     {player.leaderboardPoint.toLocaleString()}
                                                 </div>
                                                 <div className="text-gray-500 text-xs">pts</div>
