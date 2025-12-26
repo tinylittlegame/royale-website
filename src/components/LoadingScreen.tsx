@@ -9,7 +9,7 @@ interface LoadingScreenProps {
 
 const LoadingScreen: React.FC<LoadingScreenProps> = ({ message = 'Loading...' }) => {
     return (
-        <div className="fixed inset-0 z-50 flex flex-col items-center justify-center bg-black text-white">
+        <div className="flex flex-col items-center justify-center text-white w-full h-full">
             <div className="relative mb-6">
                 <div className="h-24 w-24 rounded-full border-t-4 border-b-4 border-yellow-500 animate-spin"></div>
                 <div className="absolute inset-0 flex items-center justify-center">
@@ -30,12 +30,6 @@ const LoadingScreen: React.FC<LoadingScreenProps> = ({ message = 'Loading...' })
             <p className="mt-4 text-gray-500 text-sm italic">
                 Preparing your Royale experience
             </p>
-
-            {/* Background decoration */}
-            <div className="absolute top-0 left-0 w-full h-full overflow-hidden -z-10 opacity-20 pointer-events-none">
-                <div className="absolute top-[-10%] left-[-10%] w-[40%] h-[40%] bg-yellow-500/20 rounded-full blur-[120px]"></div>
-                <div className="absolute bottom-[-10%] right-[-10%] w-[40%] h-[40%] bg-yellow-500/20 rounded-full blur-[120px]"></div>
-            </div>
         </div>
     );
 };
