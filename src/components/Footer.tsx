@@ -20,7 +20,7 @@ const Footer = () => {
                         <h3 className="text-white text-lg font-bold mb-4">Social</h3>
                         <ul className="space-y-2">
                             <li>
-                                <a href={process.env.JOIN_DISCORD || "https://discord.gg/USUhhHVHt7"} target="_blank" rel="noopener noreferrer" className="text-gray-400 hover:text-purple-400 flex items-center gap-2 transition-colors">
+                                <a href={process.env.NEXT_PUBLIC_JOIN_DISCORD || "https://discord.gg/USUhhHVHt7"} target="_blank" rel="noopener noreferrer" className="text-gray-400 hover:text-purple-400 flex items-center gap-2 transition-colors">
                                     Discord
                                 </a>
                             </li>

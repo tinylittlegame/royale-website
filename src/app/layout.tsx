@@ -4,7 +4,7 @@ import "./globals.css";
 import { Providers } from "@/components/Providers";
 import ConditionalLayout from "@/components/ConditionalLayout";
 import TikTokPixel from "@/components/TikTokPixel";
-import GoogleAnalytics from "@/components/GoogleAnalytics";
+import GoogleTagManager from "@/components/GoogleTagManager";
 
 const inter = Inter({ subsets: ["latin"] });
 
@@ -63,8 +63,8 @@ export default function RootLayout({
         <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
       </head>
       <body className={inter.className}>
+        <GoogleTagManager />
         <TikTokPixel />
-        <GoogleAnalytics />
         <Providers>
           <ConditionalLayout>
             {children}

@@ -53,8 +53,9 @@ export default function Home() {
               src="/images/Logo/Logo_327x484.png"
               alt="Tiny Little Royale Logo"
               width={200}
-              height={300}
+              height={296}
               className="drop-shadow-2xl hover:scale-105 transition-transform duration-500"
+              style={{ height: 'auto' }}
             />
           </div>
 
