@@ -61,6 +61,8 @@ export default function RootLayout({
         <meta name="mobile-web-app-capable" content="yes" />
         <meta name="apple-mobile-web-app-capable" content="yes" />
         <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+        {/* Allow rotation in all orientations */}
+        <meta name="screen-orientation" content="any" />
       </head>
       <body className={inter.className}>
         <GoogleTagManager />
