@@ -400,7 +400,8 @@ export default function PlayGame() {
       }
 
       // Try to lock orientation to landscape on mobile (not supported on iOS)
-      if ('orientation' in screen && 'lock' in screen.orientation && !isIOS()) {
+      // Skip orientation lock for in-app browsers as they often have restrictions
+      if ('orientation' in screen && 'lock' in screen.orientation && !isIOS() && !isInAppBrowser()) {
         try {
           await (screen.orientation as any).lock('landscape');
           console.log('[PlayGame] Orientation locked to landscape');
@@ -641,7 +642,7 @@ export default function PlayGame() {
             </svg>
             <div className="flex-1 min-w-0">
               <p className="text-white text-xs">
-                <span className="font-semibold">In {getInAppBrowserName()}</span> - For better fullscreen, open in Safari/Chrome
+                <span className="font-semibold">In {getInAppBrowserName()}</span> - For rotation & fullscreen, open in Safari/Chrome
               </p>
             </div>
             <button
