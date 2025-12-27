@@ -11,8 +11,8 @@ export default function Home() {
 
   const handleShare = async () => {
     const shareData = {
-      title: "Tiny Little Royale",
-      text: "Tiny little royale. โหมดตบฮุนเซน 🎮",
+      title: "เกมที่ทุกคนรอคอย!",
+      text: "ซัดฮุนเซนให้กระเด็นใน [Tiny Little Royale] 🇰🇭💥",
       url: `${window.location.origin}/playgame`,
     };
 
