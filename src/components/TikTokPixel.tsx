@@ -2,12 +2,6 @@
 
 import Script from 'next/script';
 
-declare global {
-  interface Window {
-    ttq: any;
-  }
-}
-
 function buildTikTokPixelScript(pixelId: string): string {
   return `
     !function (w, d, t) {
