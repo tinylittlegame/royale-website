@@ -3,6 +3,8 @@ import { Inter } from "next/font/google"; // Use Inter as safe default for Next 
 import "./globals.css";
 import { Providers } from "@/components/Providers";
 import ConditionalLayout from "@/components/ConditionalLayout";
+import TikTokPixel from "@/components/TikTokPixel";
+import GoogleTagManager from "@/components/GoogleTagManager";
 
 const inter = Inter({ subsets: ["latin"] });
 
@@ -59,8 +61,12 @@ export default function RootLayout({
         <meta name="mobile-web-app-capable" content="yes" />
         <meta name="apple-mobile-web-app-capable" content="yes" />
         <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+        {/* Allow rotation in all orientations */}
+        <meta name="screen-orientation" content="any" />
       </head>
       <body className={inter.className}>
+        <GoogleTagManager />
+        <TikTokPixel />
         <Providers>
           <ConditionalLayout>
             {children}
