@@ -147,3 +147,72 @@ export async function copyToClipboard(text: string): Promise<boolean> {
     return false;
   }
 }
+
+/**
+ * Detect user's country from browser timezone and language
+ * @returns ISO 3166-1 alpha-2 country code (e.g., "TH", "US", "JP")
+ */
+export function getCountryFromBrowser(): string {
+  if (typeof window === 'undefined') return '';
+
+  // Method 1: Try to get country from language/locale
+  const language = navigator.language;
+  if (language.includes('-')) {
+    const countryCode = language.split('-')[1].toUpperCase();
+    // Validate it's a 2-letter code
+    if (countryCode.length === 2) {
+      return countryCode;
+    }
+  }
+
+  // Method 2: Fallback to timezone mapping for common timezones
+  try {
+    const timezone = Intl.DateTimeFormat().resolvedOptions().timeZone;
+    const timezoneMap: Record<string, string> = {
+      // Asia
+      'Asia/Bangkok': 'TH',
+      'Asia/Jakarta': 'ID',
+      'Asia/Singapore': 'SG',
+      'Asia/Kuala_Lumpur': 'MY',
+      'Asia/Manila': 'PH',
+      'Asia/Ho_Chi_Minh': 'VN',
+      'Asia/Tokyo': 'JP',
+      'Asia/Seoul': 'KR',
+      'Asia/Hong_Kong': 'HK',
+      'Asia/Taipei': 'TW',
+      'Asia/Shanghai': 'CN',
+      'Asia/Kolkata': 'IN',
+      'Asia/Dubai': 'AE',
+      // Americas
+      'America/New_York': 'US',
+      'America/Chicago': 'US',
+      'America/Denver': 'US',
+      'America/Los_Angeles': 'US',
+      'America/Toronto': 'CA',
+      'America/Vancouver': 'CA',
+      'America/Mexico_City': 'MX',
+      'America/Sao_Paulo': 'BR',
+      'America/Buenos_Aires': 'AR',
+      // Europe
+      'Europe/London': 'GB',
+      'Europe/Paris': 'FR',
+      'Europe/Berlin': 'DE',
+      'Europe/Rome': 'IT',
+      'Europe/Madrid': 'ES',
+      'Europe/Amsterdam': 'NL',
+      'Europe/Brussels': 'BE',
+      'Europe/Zurich': 'CH',
+      'Europe/Stockholm': 'SE',
+      'Europe/Moscow': 'RU',
+      // Oceania
+      'Australia/Sydney': 'AU',
+      'Australia/Melbourne': 'AU',
+      'Pacific/Auckland': 'NZ',
+    };
+
+    return timezoneMap[timezone] || '';
+  } catch (err) {
+    console.error('[Country Detection] Failed to detect timezone:', err);
+    return '';
+  }
+}

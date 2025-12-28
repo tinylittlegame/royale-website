@@ -1,4 +1,5 @@
 import axios from "axios";
+import { getCountryFromBrowser } from "./browser-utils";
 
 /**
  * Axios instance configured for the Tiny Little backend API
@@ -92,7 +93,10 @@ export const getGameToken = async (gameId: string, jwtToken?: string) => {
  * Generate a guest token for unauthenticated users
  */
 export const getGuestToken = async (gameId: string) => {
-  const response = await api.post(`/game-stats/${gameId}/unprotected`);
+  const country = getCountryFromBrowser();
+  const response = await api.post(`/game-stats/${gameId}/unprotected`, {
+    country,
+  });
   const data = response.data?.data || response.data;
 
   if (!data || !data.token) {
@@ -110,9 +114,11 @@ export const updateGuestToken = async (
   userId: string,
   username: string,
 ) => {
+  const country = getCountryFromBrowser();
   const response = await api.put(`/game-stats/${gameId}/unprotected`, {
     userId,
     username,
+    country,
   });
 
   const data = response.data?.data || response.data;
