@@ -9,7 +9,7 @@ import { useInAppBrowser } from "@/hooks/useInAppBrowser";
 import { InAppBrowserWarning } from "@/components/playgame/InAppBrowserWarning";
 import { GameLoadingOverlay } from "@/components/playgame/GameLoadingOverlay";
 import { GameErrorScreen } from "@/components/playgame/GameErrorScreen";
-import { isMobile, isIOS } from "@/lib/browser-utils";
+import { isMobile, isIOS, isChrome, isSafari, supportsFullscreen } from "@/lib/browser-utils";
 import { TikTokTracking } from "@/lib/tiktok-client";
 
 const GAME_URL = process.env.NEXT_PUBLIC_GAME_URL || "https://tinylittleroyale.io/";
@@ -164,7 +164,11 @@ export default function PlayGame() {
 
   // Handle click anywhere to enter fullscreen
   const handleContainerClick = () => {
-    if (isMobile() && !isFullscreen && !isIOS() && gameReady) {
+    // Allow fullscreen for Chrome and Safari (excluding iOS Safari)
+    const isValidBrowser = isChrome() || (isSafari() && !isIOS());
+    const canFullscreen = supportsFullscreen() && !isFullscreen && gameReady;
+
+    if (isValidBrowser && canFullscreen) {
       console.log('[PlayGame] User clicked - entering fullscreen');
       enterFullscreen();
     }
@@ -217,6 +221,20 @@ export default function PlayGame() {
                 Starting Game...
               </p>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* Click to fullscreen indicator - shows when game is ready but not in fullscreen */}
+      {gameReady && !isFullscreen && (isChrome() || (isSafari() && !isIOS())) && supportsFullscreen() && (
+        <div className="absolute top-4 left-1/2 -translate-x-1/2 z-30 bg-black/70 backdrop-blur-sm border border-yellow-500/50 rounded-full px-6 py-3 animate-pulse">
+          <div className="text-center">
+            <p className="text-yellow-500 text-sm font-semibold">
+              แตะที่ไหนก็ได้เพื่อเข้าสู่โหมดเต็มหน้าจอ
+            </p>
+            <p className="text-yellow-400 text-xs mt-1">
+              Tap anywhere to enter fullscreen
+            </p>
           </div>
         </div>
       )}
