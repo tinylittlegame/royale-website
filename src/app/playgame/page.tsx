@@ -4,10 +4,8 @@ import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import LoadingScreen from "@/components/LoadingScreen";
 import { useGameAuth } from "@/hooks/useGameAuth";
-import { useOrientation } from "@/hooks/useOrientation";
 import { useFullscreen } from "@/hooks/useFullscreen";
 import { useInAppBrowser } from "@/hooks/useInAppBrowser";
-import { PortraitOverlay } from "@/components/playgame/PortraitOverlay";
 import { InAppBrowserWarning } from "@/components/playgame/InAppBrowserWarning";
 import { FullscreenPrompt } from "@/components/playgame/FullscreenPrompt";
 import { GameLoadingOverlay } from "@/components/playgame/GameLoadingOverlay";
@@ -25,7 +23,6 @@ export default function PlayGame() {
 
   // Custom hooks for state management
   const { token, userId, loading: authLoading, error: authError } = useGameAuth(GAME_ID);
-  const { isPortrait, setIsPortrait } = useOrientation();
   const { isFullscreen, showPrompt, setShowPrompt, enterFullscreen } = useFullscreen(
     gameContainerRef
   );
@@ -185,27 +182,18 @@ export default function PlayGame() {
         overscrollBehavior: 'none',
       } as React.CSSProperties}
     >
-      {/* Portrait mode overlay */}
-      {isPortrait && (
-        <PortraitOverlay
-          isInAppBrowser={isInApp}
-          browserName={browserName}
-          onContinueAnyway={() => setIsPortrait(false)}
-        />
-      )}
-
       {/* In-app browser warning banner */}
-      {showWarning && !iframeLoading && !isPortrait && (
+      {showWarning && !iframeLoading && (
         <InAppBrowserWarning browserName={browserName} onDismiss={() => setShowWarning(false)} />
       )}
 
       {/* Loading overlay */}
-      {iframeLoading && !isPortrait && (
+      {iframeLoading && (
         <GameLoadingOverlay isFullscreen={isFullscreen} onEnterFullscreen={enterFullscreen} />
       )}
 
       {/* Fullscreen prompt */}
-      {showPrompt && !iframeLoading && !isPortrait && (
+      {showPrompt && !iframeLoading && (
         <FullscreenPrompt
           onEnterFullscreen={enterFullscreen}
           onDismiss={() => setShowPrompt(false)}
@@ -223,7 +211,7 @@ export default function PlayGame() {
           outline: 'none',
           margin: 0,
           padding: 0,
-          display: (iframeLoading || isPortrait) ? 'none' : 'block',
+          display: iframeLoading ? 'none' : 'block',
           width: '100%',
           height: '100%',
           minWidth: '100%',

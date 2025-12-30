@@ -1,7 +1,7 @@
-'use client';
+"use client";
 
-import LoadingScreen from '@/components/LoadingScreen';
-import { isMobile, isIOS, isStandalone } from '@/lib/browser-utils';
+import LoadingScreen from "@/components/LoadingScreen";
+import { isMobile, isIOS, isStandalone } from "@/lib/browser-utils";
 
 interface GameLoadingOverlayProps {
   isFullscreen: boolean;
@@ -27,9 +27,14 @@ export function GameLoadingOverlay({
     >
       <LoadingScreen message="Loading Game..." />
       {mobile && !isFullscreen && !ios && (
-        <p className="text-yellow-500 text-sm text-center px-4 animate-pulse">
-          Tap anywhere to enter fullscreen
-        </p>
+        <div className="text-center px-4 animate-pulse">
+          <p className="text-yellow-500 text-base font-medium">
+            แตะเพื่อเข้าสู่โหมดเต็มหน้าจอ
+          </p>
+          <p className="text-yellow-200 text-xs mt-1">
+            Tap anywhere to enter fullscreen
+          </p>
+        </div>
       )}
       {ios && !standalone && (
         <p className="text-gray-400 text-sm text-center px-4 max-w-xs">
