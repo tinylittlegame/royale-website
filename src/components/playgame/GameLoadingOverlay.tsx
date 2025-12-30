@@ -24,6 +24,13 @@ export function GameLoadingOverlay({
         }
       }}
     >
+      {/* Game Logo */}
+      <img
+        src="/images/Logo/Logo_140x70.png"
+        alt="Game Logo"
+        className="w-32 h-16 object-contain mb-4"
+      />
+
       {/* Loading spinner */}
       <div className="relative">
         <div className="h-20 w-20 rounded-full border-t-4 border-b-4 border-yellow-500 animate-spin"></div>

@@ -18,10 +18,13 @@ export function useInAppBrowser() {
       setBrowserName(name);
       console.log('[useInAppBrowser] In-app browser detected:', name);
 
-      // Show warning after a short delay so user sees the game first
-      setTimeout(() => {
-        setShowWarning(true);
-      }, 1000);
+      // LINE browser supports fullscreen, so don't show warning
+      if (name !== 'LINE') {
+        // Show warning after a short delay so user sees the game first
+        setTimeout(() => {
+          setShowWarning(true);
+        }, 1000);
+      }
     }
   }, []);
 
