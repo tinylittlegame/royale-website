@@ -31,12 +31,14 @@ export default function PlayGame() {
   // Local state
   const [iframeLoading, setIframeLoading] = useState<boolean>(true);
   const [iframeError, setIframeError] = useState<boolean>(false);
+  const [gameReady, setGameReady] = useState<boolean>(false);
 
   // Handle iframe loading timeout
   useEffect(() => {
     if (token && userId) {
       setIframeLoading(true);
       setIframeError(false);
+      setGameReady(false);
 
       // Set a max timeout for iframe loading (30 seconds)
       iframeTimeoutRef.current = setTimeout(() => {
@@ -94,6 +96,11 @@ export default function PlayGame() {
     // Hide website loading screen and show game
     setIframeLoading(false);
     setIframeError(false);
+
+    // Wait for game to initialize before hiding all loading indicators
+    setTimeout(() => {
+      setGameReady(true);
+    }, 2000); // Give game 2 seconds to initialize
 
     // Track game start event with TikTok
     if (userId) {
@@ -183,7 +190,7 @@ export default function PlayGame() {
       } as React.CSSProperties}
     >
       {/* In-app browser warning banner */}
-      {showWarning && !iframeLoading && (
+      {showWarning && !iframeLoading && gameReady && (
         <InAppBrowserWarning browserName={browserName} onDismiss={() => setShowWarning(false)} />
       )}
 
@@ -192,8 +199,29 @@ export default function PlayGame() {
         <GameLoadingOverlay isFullscreen={isFullscreen} onEnterFullscreen={enterFullscreen} />
       )}
 
+      {/* Game initialization overlay (after iframe loads but before game is ready) */}
+      {!iframeLoading && !gameReady && (
+        <div className="absolute inset-0 z-40 flex flex-col items-center justify-center bg-black/80 backdrop-blur-sm">
+          <div className="flex flex-col items-center gap-4">
+            {/* Spinning loader */}
+            <div className="w-12 h-12 border-4 border-yellow-500 border-t-transparent rounded-full animate-spin"></div>
+
+            {/* Thai text (larger) */}
+            <div className="text-center">
+              <p className="text-yellow-500 text-lg font-semibold">
+                กำลังเริ่มเกม...
+              </p>
+              {/* English text (smaller) */}
+              <p className="text-yellow-400 text-sm mt-1">
+                Starting Game...
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Fullscreen prompt */}
-      {showPrompt && !iframeLoading && (
+      {showPrompt && !iframeLoading && gameReady && (
         <FullscreenPrompt
           onEnterFullscreen={enterFullscreen}
           onDismiss={() => setShowPrompt(false)}
