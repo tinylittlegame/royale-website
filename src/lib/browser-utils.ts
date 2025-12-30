@@ -75,6 +75,40 @@ export function getInAppBrowserName(): string {
 }
 
 /**
+ * Detect if user is on Chrome browser
+ */
+export function isChrome(): boolean {
+  if (typeof window === 'undefined') return false;
+  const ua = navigator.userAgent;
+  // Check for Chrome but exclude Edge (which also contains Chrome in UA)
+  return /Chrome/i.test(ua) && !/Edg/i.test(ua);
+}
+
+/**
+ * Detect if user is on Safari browser
+ */
+export function isSafari(): boolean {
+  if (typeof window === 'undefined') return false;
+  const ua = navigator.userAgent;
+  // Safari contains "Safari" but not "Chrome" (Chrome also has Safari in UA)
+  return /Safari/i.test(ua) && !/Chrome/i.test(ua);
+}
+
+/**
+ * Check if browser supports fullscreen API
+ */
+export function supportsFullscreen(): boolean {
+  if (typeof window === 'undefined') return false;
+  const elem = document.documentElement as any;
+  return !!(
+    elem.requestFullscreen ||
+    elem.webkitRequestFullscreen ||
+    elem.mozRequestFullScreen ||
+    elem.msRequestFullscreen
+  );
+}
+
+/**
  * Check if device is currently in fullscreen mode
  */
 export function isFullscreenActive(): boolean {
