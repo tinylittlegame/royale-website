@@ -15,6 +15,7 @@ import {
   isChrome,
   isSafari,
   supportsFullscreen,
+  isInAppBrowser,
 } from "@/lib/browser-utils";
 import { TikTokTracking } from "@/lib/tiktok-client";
 
@@ -42,6 +43,7 @@ export default function PlayGame() {
   const [iframeLoading, setIframeLoading] = useState<boolean>(true);
   const [iframeError, setIframeError] = useState<boolean>(false);
   const [gameReady, setGameReady] = useState<boolean>(false);
+  const [showFullscreenPrompt, setShowFullscreenPrompt] = useState<boolean>(true);
 
   // Handle iframe loading timeout
   useEffect(() => {
@@ -94,6 +96,18 @@ export default function PlayGame() {
     window.addEventListener("message", handleMessage);
     return () => window.removeEventListener("message", handleMessage);
   }, [router, userId]);
+
+  // Auto-hide fullscreen prompt after 5 seconds
+  useEffect(() => {
+    if (gameReady && showFullscreenPrompt) {
+      const timer = setTimeout(() => {
+        console.log('[PlayGame] Auto-hiding fullscreen prompt after 5 seconds');
+        setShowFullscreenPrompt(false);
+      }, 5000);
+
+      return () => clearTimeout(timer);
+    }
+  }, [gameReady, showFullscreenPrompt]);
 
   // Handle iframe load success
   const handleIframeLoad = () => {
@@ -180,8 +194,12 @@ export default function PlayGame() {
     e.preventDefault();
     e.stopPropagation();
 
-    // Allow fullscreen for Chrome and Safari (excluding iOS Safari)
-    const isValidBrowser = isChrome() || (isSafari() && !isIOS());
+    // Hide the prompt
+    setShowFullscreenPrompt(false);
+
+    // Allow fullscreen for Chrome, Safari, and LINE browser (excluding iOS Safari and other in-app browsers)
+    const isLINE = isInAppBrowser() && browserName === 'LINE';
+    const isValidBrowser = (isChrome() || (isSafari() && !isIOS()) || isLINE) && (browserName === 'LINE' || !isInAppBrowser());
     const canFullscreen = supportsFullscreen() && !isFullscreen && gameReady;
 
     if (isValidBrowser && canFullscreen) {
@@ -231,6 +249,13 @@ export default function PlayGame() {
       {!iframeLoading && !gameReady && (
         <div className="absolute inset-0 z-40 flex flex-col items-center justify-center bg-black/80 backdrop-blur-sm">
           <div className="flex flex-col items-center gap-4">
+            {/* Game Logo */}
+            <img
+              src="/images/Logo/Logo_140x70.png"
+              alt="Game Logo"
+              className="w-32 h-16 object-contain"
+            />
+
             {/* Spinning loader */}
             <div className="w-12 h-12 border-4 border-yellow-500 border-t-transparent rounded-full animate-spin"></div>
 
@@ -249,7 +274,9 @@ export default function PlayGame() {
       {/* Click to fullscreen overlay - covers entire screen */}
       {gameReady &&
         !isFullscreen &&
-        (isChrome() || (isSafari() && !isIOS())) &&
+        showFullscreenPrompt &&
+        (isChrome() || (isSafari() && !isIOS()) || (isInAppBrowser() && browserName === 'LINE')) &&
+        (browserName === 'LINE' || !isInAppBrowser()) &&
         supportsFullscreen() && (
           <div
             className="absolute inset-0 z-30 cursor-pointer"
