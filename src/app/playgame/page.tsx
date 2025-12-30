@@ -12,10 +12,7 @@ import { GameErrorScreen } from "@/components/playgame/GameErrorScreen";
 import {
   isMobile,
   isIOS,
-  isChrome,
-  isSafari,
   supportsFullscreen,
-  isInAppBrowser,
 } from "@/lib/browser-utils";
 import { TikTokTracking } from "@/lib/tiktok-client";
 
@@ -197,12 +194,10 @@ export default function PlayGame() {
     // Hide the prompt
     setShowFullscreenPrompt(false);
 
-    // Allow fullscreen for Chrome, Safari, and LINE browser (excluding iOS Safari and other in-app browsers)
-    const isLINE = isInAppBrowser() && browserName === 'LINE';
-    const isValidBrowser = (isChrome() || (isSafari() && !isIOS()) || isLINE) && (browserName === 'LINE' || !isInAppBrowser());
-    const canFullscreen = supportsFullscreen() && !isFullscreen && gameReady;
+    // Allow fullscreen for any browser that supports it (excluding iOS)
+    const canFullscreen = supportsFullscreen() && !isFullscreen && gameReady && !isIOS();
 
-    if (isValidBrowser && canFullscreen) {
+    if (canFullscreen) {
       console.log("[PlayGame] User clicked - entering fullscreen");
       enterFullscreen();
     }
@@ -275,9 +270,8 @@ export default function PlayGame() {
       {gameReady &&
         !isFullscreen &&
         showFullscreenPrompt &&
-        (isChrome() || (isSafari() && !isIOS()) || (isInAppBrowser() && browserName === 'LINE')) &&
-        (browserName === 'LINE' || !isInAppBrowser()) &&
-        supportsFullscreen() && (
+        supportsFullscreen() &&
+        !isIOS() && (
           <div
             className="absolute inset-0 z-30 cursor-pointer"
             onClick={handleContainerClick}
