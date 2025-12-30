@@ -7,7 +7,6 @@ import { useGameAuth } from "@/hooks/useGameAuth";
 import { useFullscreen } from "@/hooks/useFullscreen";
 import { useInAppBrowser } from "@/hooks/useInAppBrowser";
 import { InAppBrowserWarning } from "@/components/playgame/InAppBrowserWarning";
-import { FullscreenPrompt } from "@/components/playgame/FullscreenPrompt";
 import { GameLoadingOverlay } from "@/components/playgame/GameLoadingOverlay";
 import { GameErrorScreen } from "@/components/playgame/GameErrorScreen";
 import { isMobile, isIOS } from "@/lib/browser-utils";
@@ -23,7 +22,7 @@ export default function PlayGame() {
 
   // Custom hooks for state management
   const { token, userId, loading: authLoading, error: authError } = useGameAuth(GAME_ID);
-  const { isFullscreen, showPrompt, setShowPrompt, enterFullscreen } = useFullscreen(
+  const { isFullscreen, enterFullscreen } = useFullscreen(
     gameContainerRef
   );
   const { isInApp, browserName, showWarning, setShowWarning } = useInAppBrowser();
@@ -110,13 +109,6 @@ export default function PlayGame() {
       });
     }
 
-    // On mobile, automatically try to enter fullscreen after loading
-    if (isMobile() && !isFullscreen && !isIOS()) {
-      setTimeout(() => {
-        enterFullscreen();
-      }, 300);
-    }
-
     // On iOS, try to hide the address bar by scrolling
     if (isIOS()) {
       setTimeout(() => {
@@ -170,10 +162,19 @@ export default function PlayGame() {
     iframeError
   });
 
+  // Handle click anywhere to enter fullscreen
+  const handleContainerClick = () => {
+    if (isMobile() && !isFullscreen && !isIOS() && gameReady) {
+      console.log('[PlayGame] User clicked - entering fullscreen');
+      enterFullscreen();
+    }
+  };
+
   return (
     <div
       ref={gameContainerRef}
-      className="fixed inset-0 w-full h-full bg-black overflow-hidden"
+      onClick={handleContainerClick}
+      className="fixed inset-0 w-full h-full bg-black overflow-hidden cursor-pointer"
       style={{
         height: '100dvh',
         minHeight: '100dvh',
@@ -218,14 +219,6 @@ export default function PlayGame() {
             </div>
           </div>
         </div>
-      )}
-
-      {/* Fullscreen prompt */}
-      {showPrompt && !iframeLoading && gameReady && (
-        <FullscreenPrompt
-          onEnterFullscreen={enterFullscreen}
-          onDismiss={() => setShowPrompt(false)}
-        />
       )}
 
       {/* Game iframe */}
