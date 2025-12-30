@@ -12,7 +12,7 @@ const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || "https://royaleapp.tinylittl
 
 export const metadata: Metadata = {
   title: "Tiny Little Royale",
-  description: "Tiny little royale. โหมดตบฮุนเซนย - A fast-paced 2.5D multiplayer battle game. Fight players worldwide!",
+  description: "เกมที่ทุกคนรอคอย! ตบบอสเขมรให้กระเด็นใน [Tiny Little Royale] 🇰🇭💥",
   viewport: {
     width: "device-width",
     initialScale: 1,
@@ -27,7 +27,7 @@ export const metadata: Metadata = {
   },
   openGraph: {
     title: "Tiny Little Royale",
-    description: "Tiny little royale. โหมดตบฮุนเซนย 🎮",
+    description: "เกมที่ทุกคนรอคอย! ตบบอสเขมรให้กระเด็นใน [Tiny Little Royale] 🇰🇭💥",
     url: baseUrl,
     siteName: "Tiny Little Royale",
     images: [
@@ -35,7 +35,7 @@ export const metadata: Metadata = {
         url: `${baseUrl}/images/2_icon_husen_512.png`,
         width: 512,
         height: 512,
-        alt: "Tiny Little Royale - โหมดตบฮุนเซนย",
+        alt: "Tiny Little Royale - เกมตบบอสเขมร",
       },
     ],
     locale: "th_TH",
@@ -44,7 +44,7 @@ export const metadata: Metadata = {
   twitter: {
     card: "summary_large_image",
     title: "Tiny Little Royale",
-    description: "Tiny little royale. โหมดตบฮุนเซนย 🎮",
+    description: "เกมที่ทุกคนรอคอย! ตบบอสเขมรให้กระเด็นใน [Tiny Little Royale] 🇰🇭💥",
     images: [`${baseUrl}/images/2_icon_husen_512.png`],
   },
 };
