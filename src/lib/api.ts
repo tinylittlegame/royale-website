@@ -92,7 +92,9 @@ export const getGameToken = async (gameId: string, jwtToken?: string) => {
  * Generate a guest token for unauthenticated users
  */
 export const getGuestToken = async (gameId: string) => {
-  const response = await api.post(`/game-stats/${gameId}/unprotected`);
+  const response = await api.post(`/game-stats/${gameId}/unprotected`, {
+    country: "TH",
+  });
   const data = response.data?.data || response.data;
 
   if (!data || !data.token) {
@@ -113,6 +115,7 @@ export const updateGuestToken = async (
   const response = await api.put(`/game-stats/${gameId}/unprotected`, {
     userId,
     username,
+    country: "TH",
   });
 
   const data = response.data?.data || response.data;
