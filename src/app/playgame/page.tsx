@@ -9,10 +9,17 @@ import { useInAppBrowser } from "@/hooks/useInAppBrowser";
 import { InAppBrowserWarning } from "@/components/playgame/InAppBrowserWarning";
 import { GameLoadingOverlay } from "@/components/playgame/GameLoadingOverlay";
 import { GameErrorScreen } from "@/components/playgame/GameErrorScreen";
-import { isMobile, isIOS, isChrome, isSafari, supportsFullscreen } from "@/lib/browser-utils";
+import {
+  isMobile,
+  isIOS,
+  isChrome,
+  isSafari,
+  supportsFullscreen,
+} from "@/lib/browser-utils";
 import { TikTokTracking } from "@/lib/tiktok-client";
 
-const GAME_URL = process.env.NEXT_PUBLIC_GAME_URL || "https://tinylittleroyale.io/";
+const GAME_URL =
+  process.env.NEXT_PUBLIC_GAME_URL || "https://tinylittleroyale.io/";
 const GAME_ID = process.env.NEXT_PUBLIC_GAME_ID || "tiny-little-royale";
 
 export default function PlayGame() {
@@ -21,11 +28,15 @@ export default function PlayGame() {
   const iframeTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   // Custom hooks for state management
-  const { token, userId, loading: authLoading, error: authError } = useGameAuth(GAME_ID);
-  const { isFullscreen, enterFullscreen } = useFullscreen(
-    gameContainerRef
-  );
-  const { isInApp, browserName, showWarning, setShowWarning } = useInAppBrowser();
+  const {
+    token,
+    userId,
+    loading: authLoading,
+    error: authError,
+  } = useGameAuth(GAME_ID);
+  const { isFullscreen, enterFullscreen } = useFullscreen(gameContainerRef);
+  const { isInApp, browserName, showWarning, setShowWarning } =
+    useInAppBrowser();
 
   // Local state
   const [iframeLoading, setIframeLoading] = useState<boolean>(true);
@@ -41,7 +52,9 @@ export default function PlayGame() {
 
       // Set a max timeout for iframe loading (30 seconds)
       iframeTimeoutRef.current = setTimeout(() => {
-        console.error("[PlayGame] Iframe loading timeout - game did not load in 30 seconds");
+        console.error(
+          "[PlayGame] Iframe loading timeout - game did not load in 30 seconds",
+        );
         setIframeError(true);
         setIframeLoading(false);
       }, 30000);
@@ -61,15 +74,15 @@ export default function PlayGame() {
         console.log("[PlayGame] Received signup event from game");
 
         // Track signup click with TikTok
-        TikTokTracking.clickButton('game-signup', {
-          source: 'in_game',
+        TikTokTracking.clickButton("game-signup", {
+          source: "in_game",
           user_id: userId,
         });
 
         // Extract referral code from URL hash
         const hash = window.location.hash.substring(1);
         const params = new URLSearchParams(hash);
-        const referralCode = params.get('referral');
+        const referralCode = params.get("referral");
 
         if (referralCode) {
           router.push(`/#referral=${referralCode}`);
@@ -105,7 +118,7 @@ export default function PlayGame() {
     if (userId) {
       TikTokTracking.gameStart(userId, {
         game_id: GAME_ID,
-        platform: isMobile() ? 'mobile' : 'desktop',
+        platform: isMobile() ? "mobile" : "desktop",
       });
     }
 
@@ -149,8 +162,8 @@ export default function PlayGame() {
 
   // Build game URL with parameters
   const branch = process.env.BRANCH === "develop" ? "&branch=develop" : "";
-  const viewportWidth = typeof window !== 'undefined' ? window.innerWidth : 0;
-  const viewportHeight = typeof window !== 'undefined' ? window.innerHeight : 0;
+  const viewportWidth = typeof window !== "undefined" ? window.innerWidth : 0;
+  const viewportHeight = typeof window !== "undefined" ? window.innerHeight : 0;
   const finalGameUrl = `${GAME_URL}?user=${userId}&login-token=${token}${branch}&vw=${viewportWidth}&vh=${viewportHeight}`;
 
   console.log("[PlayGame] Rendering game with:", {
@@ -159,17 +172,20 @@ export default function PlayGame() {
     hasToken: !!token,
     finalGameUrl,
     iframeLoading,
-    iframeError
+    iframeError,
   });
 
   // Handle click anywhere to enter fullscreen
-  const handleContainerClick = () => {
+  const handleContainerClick = (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+
     // Allow fullscreen for Chrome and Safari (excluding iOS Safari)
     const isValidBrowser = isChrome() || (isSafari() && !isIOS());
     const canFullscreen = supportsFullscreen() && !isFullscreen && gameReady;
 
     if (isValidBrowser && canFullscreen) {
-      console.log('[PlayGame] User clicked - entering fullscreen');
+      console.log("[PlayGame] User clicked - entering fullscreen");
       enterFullscreen();
     }
   };
@@ -177,31 +193,38 @@ export default function PlayGame() {
   return (
     <div
       ref={gameContainerRef}
-      onClick={handleContainerClick}
-      className="fixed inset-0 w-full h-full bg-black overflow-hidden cursor-pointer"
-      style={{
-        height: '100dvh',
-        minHeight: '100dvh',
-        maxHeight: '100dvh',
-        position: 'fixed',
-        top: 0,
-        left: 0,
-        right: 0,
-        bottom: 0,
-        margin: 0,
-        padding: 0,
-        touchAction: 'none',
-        overscrollBehavior: 'none',
-      } as React.CSSProperties}
+      className="fixed inset-0 w-full h-full bg-black overflow-hidden"
+      style={
+        {
+          height: "100dvh",
+          minHeight: "100dvh",
+          maxHeight: "100dvh",
+          position: "fixed",
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          margin: 0,
+          padding: 0,
+          touchAction: "none",
+          overscrollBehavior: "none",
+        } as React.CSSProperties
+      }
     >
       {/* In-app browser warning banner */}
       {showWarning && !iframeLoading && gameReady && (
-        <InAppBrowserWarning browserName={browserName} onDismiss={() => setShowWarning(false)} />
+        <InAppBrowserWarning
+          browserName={browserName}
+          onDismiss={() => setShowWarning(false)}
+        />
       )}
 
       {/* Loading overlay */}
       {iframeLoading && (
-        <GameLoadingOverlay isFullscreen={isFullscreen} onEnterFullscreen={enterFullscreen} />
+        <GameLoadingOverlay
+          isFullscreen={isFullscreen}
+          onEnterFullscreen={enterFullscreen}
+        />
       )}
 
       {/* Game initialization overlay (after iframe loads but before game is ready) */}
@@ -217,27 +240,43 @@ export default function PlayGame() {
                 กำลังเริ่มเกม...
               </p>
               {/* English text (smaller) */}
-              <p className="text-yellow-400 text-sm mt-1">
-                Starting Game...
-              </p>
+              <p className="text-yellow-400 text-sm mt-1">Starting Game...</p>
             </div>
           </div>
         </div>
       )}
 
-      {/* Click to fullscreen indicator - shows when game is ready but not in fullscreen */}
-      {gameReady && !isFullscreen && (isChrome() || (isSafari() && !isIOS())) && supportsFullscreen() && (
-        <div className="absolute top-4 left-1/2 -translate-x-1/2 z-30 bg-black/70 backdrop-blur-sm border border-yellow-500/50 rounded-full px-6 py-3 animate-pulse">
-          <div className="text-center">
-            <p className="text-yellow-500 text-sm font-semibold">
-              แตะที่ไหนก็ได้เพื่อเข้าสู่โหมดเต็มหน้าจอ
-            </p>
-            <p className="text-yellow-400 text-xs mt-1">
-              Tap anywhere to enter fullscreen
-            </p>
+      {/* Click to fullscreen overlay - covers entire screen */}
+      {gameReady &&
+        !isFullscreen &&
+        (isChrome() || (isSafari() && !isIOS())) &&
+        supportsFullscreen() && (
+          <div
+            className="absolute inset-0 z-30 cursor-pointer"
+            onClick={handleContainerClick}
+          >
+            {/* Message at top */}
+            <div className="absolute top-4 left-1/2 -translate-x-1/2 bg-black/70 backdrop-blur-sm border border-yellow-500/50 rounded-2xl px-8 py-4 animate-pulse pointer-events-none">
+              <div className="flex flex-col items-center gap-3">
+                {/* Game Logo */}
+                <img
+                  src="/images/Logo/Logo_140x70.png"
+                  alt="Game Logo"
+                  className="w-28 h-14 object-contain"
+                />
+                {/* Text */}
+                <div className="text-center">
+                  <p className="text-yellow-500 text-sm font-semibold">
+                    แตะเพื่อเข้าสู่โหมดเต็มหน้าจอ
+                  </p>
+                  <p className="text-yellow-200 text-xs mt-1">
+                    Tap anywhere to enter fullscreen
+                  </p>
+                </div>
+              </div>
+            </div>
           </div>
-        </div>
-      )}
+        )}
 
       {/* Game iframe */}
       <iframe
@@ -246,24 +285,24 @@ export default function PlayGame() {
         onError={handleIframeError}
         className="absolute inset-0 w-full h-full border-none"
         style={{
-          border: 'none',
-          outline: 'none',
+          border: "none",
+          outline: "none",
           margin: 0,
           padding: 0,
-          display: iframeLoading ? 'none' : 'block',
-          width: '100%',
-          height: '100%',
-          minWidth: '100%',
-          minHeight: '100%',
-          maxWidth: '100%',
-          maxHeight: '100%',
-          overflow: 'hidden',
-          position: 'absolute',
+          display: iframeLoading ? "none" : "block",
+          width: "100%",
+          height: "100%",
+          minWidth: "100%",
+          minHeight: "100%",
+          maxWidth: "100%",
+          maxHeight: "100%",
+          overflow: "hidden",
+          position: "absolute",
           top: 0,
           left: 0,
           right: 0,
           bottom: 0,
-          objectFit: 'fill' as any,
+          objectFit: "fill" as any,
         }}
         allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; fullscreen"
         allowFullScreen
@@ -272,12 +311,12 @@ export default function PlayGame() {
       />
 
       {/* Debug info in development */}
-      {process.env.NODE_ENV === 'development' && (
+      {process.env.NODE_ENV === "development" && (
         <div className="absolute bottom-4 right-4 bg-black/80 text-white text-xs p-2 rounded font-mono max-w-sm">
           <div>Game URL: {GAME_URL}</div>
           <div>User ID: {userId?.substring(0, 8)}...</div>
-          <div>Token: {token ? '✓' : '✗'}</div>
-          <div>Loading: {iframeLoading ? 'Yes' : 'No'}</div>
+          <div>Token: {token ? "✓" : "✗"}</div>
+          <div>Loading: {iframeLoading ? "Yes" : "No"}</div>
         </div>
       )}
     </div>
