@@ -75,6 +75,34 @@ export function getInAppBrowserName(): string {
 }
 
 /**
+ * Check if Telegram Web App API is available
+ */
+export function isTelegramWebApp(): boolean {
+  if (typeof window === 'undefined') return false;
+  return typeof (window as any).Telegram !== 'undefined' &&
+         typeof (window as any).Telegram.WebApp !== 'undefined';
+}
+
+/**
+ * Open URL in external browser using Telegram WebApp API
+ */
+export function openInExternalBrowser(url: string): void {
+  if (isTelegramWebApp()) {
+    try {
+      (window as any).Telegram.WebApp.openLink(url, { try_instant_view: false });
+      console.log('[Telegram] Opening in external browser:', url);
+    } catch (err) {
+      console.error('[Telegram] Failed to open external browser:', err);
+      // Fallback to regular window.open
+      window.open(url, '_blank');
+    }
+  } else {
+    // Not Telegram, use regular window.open
+    window.open(url, '_blank');
+  }
+}
+
+/**
  * Detect if user is on Chrome browser
  */
 export function isChrome(): boolean {
