@@ -63,6 +63,8 @@ export default function RootLayout({
         <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
         {/* Allow rotation in all orientations */}
         <meta name="screen-orientation" content="any" />
+        {/* Telegram Web App SDK */}
+        <script src="https://telegram.org/js/telegram-web-app.js" async></script>
       </head>
       <body className={inter.className}>
         <GoogleTagManager />
