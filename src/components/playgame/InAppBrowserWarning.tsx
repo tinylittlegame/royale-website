@@ -1,6 +1,6 @@
 'use client';
 
-import { copyToClipboard } from '@/lib/browser-utils';
+import { copyToClipboard, openInExternalBrowser, isTelegramWebApp } from '@/lib/browser-utils';
 
 interface InAppBrowserWarningProps {
   browserName: string;
@@ -8,6 +8,9 @@ interface InAppBrowserWarningProps {
 }
 
 export function InAppBrowserWarning({ browserName, onDismiss }: InAppBrowserWarningProps) {
+  const isTelegram = browserName === 'Telegram';
+  const hasTelegramWebApp = isTelegramWebApp();
+
   const handleCopyLink = async () => {
     const currentUrl = window.location.href;
     const success = await copyToClipboard(currentUrl);
@@ -17,6 +20,11 @@ export function InAppBrowserWarning({ browserName, onDismiss }: InAppBrowserWarn
     } else {
       alert(`Copy this link:\n${currentUrl}`);
     }
+  };
+
+  const handleOpenExternal = () => {
+    const currentUrl = window.location.href;
+    openInExternalBrowser(currentUrl);
   };
 
   return (
@@ -37,16 +45,28 @@ export function InAppBrowserWarning({ browserName, onDismiss }: InAppBrowserWarn
         </svg>
         <div className="flex-1 min-w-0">
           <p className="text-white text-xs">
-            <span className="font-semibold">In {browserName}</span> - For rotation & fullscreen,
-            open in Safari/Chrome
+            <span className="font-semibold">In {browserName}</span> -
+            {isTelegram && hasTelegramWebApp
+              ? ' Tap to open in browser for fullscreen'
+              : ' For rotation & fullscreen, open in Safari/Chrome'
+            }
           </p>
         </div>
-        <button
-          onClick={handleCopyLink}
-          className="px-2 py-1 bg-white text-orange-700 font-bold text-xs rounded hover:bg-orange-50 transition-colors flex-shrink-0"
-        >
-          Copy
-        </button>
+        {isTelegram && hasTelegramWebApp ? (
+          <button
+            onClick={handleOpenExternal}
+            className="px-3 py-1 bg-white text-orange-700 font-bold text-xs rounded hover:bg-orange-50 transition-colors flex-shrink-0"
+          >
+            Open
+          </button>
+        ) : (
+          <button
+            onClick={handleCopyLink}
+            className="px-2 py-1 bg-white text-orange-700 font-bold text-xs rounded hover:bg-orange-50 transition-colors flex-shrink-0"
+          >
+            Copy
+          </button>
+        )}
         <button
           onClick={onDismiss}
           className="text-white/90 hover:text-white flex-shrink-0 p-1"
